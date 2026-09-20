@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Terms of Service | NOVAMENU",
-  description: "Terms of Service for NOVAMENU.",
+  title: "Terms of Service | The Partner",
+  description: "Terms of Service for The Partner.",
 };
 
 export default function TermsOfServicePage() {
@@ -14,7 +14,7 @@ export default function TermsOfServicePage() {
             href="/"
             className="inline-flex items-center text-sm font-semibold tracking-wide text-[#B08D57] transition-opacity hover:opacity-70"
           >
-            NOVAMENU
+            The Partner
           </Link>
 
           <h1 className="mt-8 text-4xl font-black tracking-tight sm:text-5xl">
@@ -29,11 +29,11 @@ export default function TermsOfServicePage() {
         <div className="space-y-10 text-[15px] leading-7 text-[#171613]/75">
           <section>
             <h2 className="mb-3 text-xl font-bold text-[#171613]">
-              1. About NOVAMENU
+              1. About The Partner
             </h2>
             <p>
-              NOVAMENU is a restaurant technology platform operated by Novera
-              Labs. NOVAMENU provides digital menu, restaurant management,
+              The Partner is a restaurant technology platform operated by Novera
+              Labs. The Partner provides digital menu, restaurant management,
               ordering, QR code, and related tools that allow restaurants to
               create and manage digital experiences for their customers.
             </p>
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
               2. Acceptance of These Terms
             </h2>
             <p>
-              By creating an account, accessing, or using NOVAMENU, you agree
+              By creating an account, accessing, or using The Partner, you agree
               to these Terms of Service. If you do not agree with these terms,
               you should not use the service.
             </p>
@@ -230,7 +230,7 @@ export default function TermsOfServicePage() {
             href="/"
             className="font-semibold text-[#171613]/55 hover:text-[#171613]"
           >
-            Back to NOVAMENU
+              Back to The Partner
           </Link>
         </div>
       </div>

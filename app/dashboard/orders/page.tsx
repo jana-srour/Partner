@@ -6,9 +6,16 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  DollarSign,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
   Printer,
+  Trash2,
   X,
 } from 'lucide-react';
+import { restaurantDayKey } from '@/lib/restaurant-day';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
@@ -33,10 +40,29 @@ import {
   defaultPrinter,
 } from '@/lib/printer-scanner';
 
-type OrderStatus = 'New' | 'Preparing' | 'Ready' | 'Delivered';
+type OrderStatus = 'New' | 'Preparing' | 'Ready' | 'Delivered' | 'Cancelled';
 type OrderLocation = 'Restaurant' | 'Delivery';
 type SortOption = 'newest' | 'oldest';
 type DateFilter = 'all' | 'today' | 'last7' | 'last30';
+
+type EditableExtra = {
+  id: string;
+  name: string;
+  price: number;
+};
+
+type EditableMenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  extras: EditableExtra[];
+};
+
+type EditableOrderItem = {
+  menuItemId: string;
+  quantity: number;
+  extraIds: string[];
+};
 
 type Order = {
   id: string;
@@ -48,6 +74,7 @@ type Order = {
   status: OrderStatus;
   channel: string;
   total: number;
+  deliveryFee: number;
   createdAt: string;
   createdAtTimestamp: number;
   location: OrderLocation;
@@ -68,6 +95,7 @@ type OrderRow = {
   status: OrderStatus;
   channel: string;
   total: number;
+  delivery_fee: number;
   created_at: string;
   order_items: {
     item_name: string;
@@ -112,7 +140,15 @@ const formatPrice = (price: number) => {
   return value.toFixed(2);
 };
 
+function isFeeEligibleOrder(order: Pick<Order, 'channel' | 'location'>) {
+  const channel = order.channel.trim().toLowerCase().replace(/[-_]/g, ' ');
+  return order.location === 'Delivery' || channel === 'delivery' || channel === 'takeaway' || channel === 'take away';
+}
+
 function mapOrder(row: OrderRow): Order {
+  const channel = row.channel || (row.customer_address ? 'Delivery' : 'Dine-in');
+  const isDelivery = channel.trim().toLowerCase() === 'delivery' || Boolean(row.customer_address);
+
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -121,8 +157,9 @@ function mapOrder(row: OrderRow): Order {
     table: row.table_number || '',
     address: row.customer_address || '',
     status: row.status,
-    channel: row.channel || (row.customer_address ? 'Delivery' : 'Dine-in'),
+    channel,
     total: Number(row.total),
+    deliveryFee: Number(row.delivery_fee) || 0,
     createdAt: new Date(row.created_at).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -130,7 +167,7 @@ function mapOrder(row: OrderRow): Order {
       minute: '2-digit',
     }),
     createdAtTimestamp: new Date(row.created_at).getTime(),
-    location: row.customer_address ? 'Delivery' : 'Restaurant',
+    location: isDelivery ? 'Delivery' : 'Restaurant',
     items: (row.order_items || []).map((item) => ({
       name: item.item_name,
       qty: item.quantity,
@@ -142,6 +179,13 @@ function mapOrder(row: OrderRow): Order {
 export default function OrdersPage() {
   const [, setRestaurantName] = useState('Restaurant');
   const [currency, setCurrency] = useState('USD');
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [restaurantDayStart, setRestaurantDayStart] = useState('00:00');
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryFeeDraft, setDeliveryFeeDraft] = useState('0');
+  const [deliveryFeeCode, setDeliveryFeeCode] = useState('');
+  const [showDeliveryFeeEditor, setShowDeliveryFeeEditor] = useState(false);
+  const [savingDeliveryFee, setSavingDeliveryFee] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'All' | OrderStatus>('All');
   const [locationFilter, setLocationFilter] = useState<'All' | OrderLocation>('All');
@@ -157,6 +201,14 @@ export default function OrdersPage() {
   const [printOrder, setPrintOrder] = useState<Order | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printMessage, setPrintMessage] = useState('');
+  const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
+  const [cancelCode, setCancelCode] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [menuItems, setMenuItems] = useState<EditableMenuItem[]>([]);
+  const [editItems, setEditItems] = useState<EditableOrderItem[]>([]);
+  const [editCode, setEditCode] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Date Grouping Collapsed State
   const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
@@ -184,7 +236,7 @@ export default function OrdersPage() {
     const { data, error: queryError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, customer_name, customer_phone, table_number, customer_address, status, channel, total, created_at, order_items(item_name, quantity, unit_price)'
+        'id, order_number, customer_name, customer_phone, table_number, customer_address, status, channel, total, delivery_fee, created_at, order_items(item_name, quantity, unit_price)'
       )
       .eq('restaurant_id', id);
 
@@ -195,6 +247,29 @@ export default function OrdersPage() {
     }
 
     setOrders(((data || []) as OrderRow[]).map(mapOrder));
+  }, []);
+
+  const loadEditableMenu = useCallback(async (id: string) => {
+    const { data, error: menuError } = await supabase
+      .from('menu_items')
+      .select('id, name, price, menu_item_extras(id, name, price, is_available)')
+      .eq('restaurant_id', id)
+      .eq('is_available', true)
+      .order('name', { ascending: true });
+
+    if (menuError) {
+      setError(`Could not load menu items: ${menuError.message}`);
+      return;
+    }
+
+    setMenuItems((data || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      extras: ((item.menu_item_extras || []) as Array<{ id: string; name: string; price: number; is_available: boolean }>)
+        .filter((extra) => extra.is_available)
+        .map((extra) => ({ id: extra.id, name: extra.name, price: Number(extra.price) || 0 })),
+    })));
   }, []);
 
   useEffect(() => {
@@ -250,7 +325,7 @@ export default function OrdersPage() {
 
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, currency')
+        .select('name, currency, delivery_fee')
         .eq('id', id)
         .single();
 
@@ -258,6 +333,15 @@ export default function OrdersPage() {
 
       setRestaurantName(restaurant?.name || 'Restaurant');
       setCurrency(restaurant?.currency || 'USD');
+      setDeliveryFee(Number(restaurant?.delivery_fee) || 0);
+      setDeliveryFeeDraft(String(Number(restaurant?.delivery_fee) || 0));
+      setRestaurantId(id);
+      const { data: restaurantSettings } = await supabase
+        .from('restaurants')
+        .select('restaurant_day_start')
+        .eq('id', id)
+        .single();
+      setRestaurantDayStart(String(restaurantSettings?.restaurant_day_start || '00:00:00').slice(0, 5));
 
       // Load Printer Settings & Receipt Template
       const storedPrinter = window.localStorage.getItem(PRINTER_STORAGE_KEY);
@@ -275,6 +359,7 @@ export default function OrdersPage() {
       setReceiptTemplate(loadedTemplate);
 
       await loadOrders(id);
+      await loadEditableMenu(id);
       if (!active) return;
 
       unsubscribeRealtime = subscribeRestaurantRealtime(supabase, {
@@ -299,7 +384,7 @@ export default function OrdersPage() {
       active = false;
       unsubscribeRealtime?.();
     };
-  }, [loadOrders]);
+  }, [loadEditableMenu, loadOrders]);
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     const { error: updateError } = await supabase
@@ -317,6 +402,149 @@ export default function OrdersPage() {
     );
   };
 
+  const executeCancellation = async () => {
+    if (!cancelOrder || !restaurantId || !cancelCode.trim()) return;
+    setCancelling(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = sessionData.session?.access_token
+      ? await fetch('/api/orders/cancel', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${sessionData.session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restaurantId, orderId: cancelOrder.id, code: cancelCode.trim() }),
+        })
+      : null;
+    const result = response ? await response.json() : { error: 'Your session has expired.' };
+    setCancelling(false);
+    if (!response?.ok) {
+      setError(result.error || 'Unable to cancel order.');
+      return;
+    }
+    setOrders((current) => current.map((order) => order.id === cancelOrder.id ? { ...order, status: 'Cancelled' } : order));
+    setCancelOrder(null);
+    setCancelCode('');
+  };
+
+  const openOrderEditor = (order: Order) => {
+    const initialItems = order.items.map((item) => {
+      const menuItem = menuItems.find((candidate) =>
+        item.name === candidate.name || item.name.startsWith(`${candidate.name} + `)
+      );
+
+      return {
+        menuItemId: menuItem?.id || '',
+        quantity: item.qty,
+        extraIds: menuItem
+          ? menuItem.extras
+              .filter((extra) => item.name.includes(extra.name))
+              .map((extra) => extra.id)
+          : [],
+      };
+    });
+
+    setEditOrder(order);
+    setEditItems(initialItems);
+    setEditCode('');
+    setError('');
+  };
+
+  const saveOrderEdit = async () => {
+    if (!editOrder || !restaurantId || !editCode.trim() || editItems.length === 0) return;
+    const selectedItems = editItems.map((item) => {
+      const menuItem = menuItems.find((candidate) => candidate.id === item.menuItemId);
+      const extras = menuItem?.extras.filter((extra) => item.extraIds.includes(extra.id)) || [];
+      const name = menuItem
+        ? `${menuItem.name}${extras.length > 0 ? ` + ${extras.map((extra) => extra.name).join(', ')}` : ''}`
+        : '';
+      const unitPrice = (menuItem?.price || 0) + extras.reduce((sum, extra) => sum + extra.price, 0);
+
+      return { name, quantity: item.quantity, unitPrice };
+    });
+
+    if (selectedItems.some((item) => !item.name)) {
+      setError('Choose a menu item for every order line.');
+      return;
+    }
+
+    setSavingEdit(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = sessionData.session
+      ? await fetch('/api/orders/edit', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            restaurantId,
+            orderId: editOrder.id,
+            code: editCode.trim(),
+            items: selectedItems,
+          }),
+        })
+      : null;
+    const result = response ? await response.json() : { error: 'Your session has expired.' };
+    setSavingEdit(false);
+
+    if (!response?.ok) {
+      setError(result.error || 'Unable to save order changes.');
+      return;
+    }
+
+    setOrders((current) => current.map((order) => order.id === editOrder.id
+      ? {
+          ...order,
+          items: selectedItems.map((item) => ({
+            name: item.name,
+            qty: item.quantity,
+            price: item.unitPrice,
+          })),
+          total: Number(result.total) || order.total,
+        }
+      : order
+    ));
+    setEditOrder(null);
+    setEditCode('');
+  };
+
+  const saveDeliveryFee = async () => {
+    if (!restaurantId || !deliveryFeeCode.trim()) return;
+    const nextFee = Number(deliveryFeeDraft);
+    if (!Number.isFinite(nextFee) || nextFee < 0) {
+      setError('Delivery fee must be zero or a positive amount.');
+      return;
+    }
+
+    setSavingDeliveryFee(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = sessionData.session
+      ? await fetch('/api/settings/delivery-fee', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            restaurantId,
+            code: deliveryFeeCode.trim(),
+            deliveryFee: nextFee,
+          }),
+        })
+      : null;
+    const result = response ? await response.json() : { error: 'Your session has expired.' };
+    setSavingDeliveryFee(false);
+
+    if (!response?.ok) {
+      setError(result.error || 'Unable to update delivery fee.');
+      return;
+    }
+
+    setDeliveryFee(nextFee);
+    setDeliveryFeeDraft(String(nextFee));
+    setDeliveryFeeCode('');
+    setShowDeliveryFeeEditor(false);
+    setError('');
+  };
+
   const requestPrintOrder = (order: Order) => {
     setPrintMessage('');
     const stored = window.localStorage.getItem(PRINTER_STORAGE_KEY);
@@ -329,6 +557,13 @@ export default function OrdersPage() {
 
   const executePrintJob = async (orderToPrint: Order) => {
     const printerToUse = configuredPrinter || defaultPrinter;
+    const feeEligible = isFeeEligibleOrder(orderToPrint);
+    const appliedDeliveryFee = feeEligible
+      ? (orderToPrint.deliveryFee > 0 ? orderToPrint.deliveryFee : deliveryFee)
+      : 0;
+    const printTotal = orderToPrint.total + (
+      feeEligible && orderToPrint.deliveryFee <= 0 ? deliveryFee : 0
+    );
     setPrinting(true);
     setPrintMessage('');
 
@@ -344,7 +579,8 @@ export default function OrdersPage() {
             address: orderToPrint.address,
             channel: orderToPrint.channel,
             createdAt: orderToPrint.createdAt,
-            total: orderToPrint.total,
+            total: printTotal,
+            deliveryFee: appliedDeliveryFee,
             currency,
             items: orderToPrint.items,
           },
@@ -374,7 +610,8 @@ export default function OrdersPage() {
             address: orderToPrint.address,
             channel: orderToPrint.channel,
             createdAt: orderToPrint.createdAt,
-            total: orderToPrint.total,
+            total: printTotal,
+            deliveryFee: appliedDeliveryFee,
             currency,
             items: orderToPrint.items,
           },
@@ -401,14 +638,10 @@ export default function OrdersPage() {
   // Filtered list of orders
   const visibleOrders = useMemo(() => {
     const now = new Date();
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    ).getTime();
+    const todayKey = restaurantDayKey(now, restaurantDayStart);
     const dateCutoff =
       dateFilter === 'today'
-        ? startOfToday
+        ? orders.reduce((earliest, order) => restaurantDayKey(new Date(order.createdAtTimestamp), restaurantDayStart) === todayKey ? Math.min(earliest, order.createdAtTimestamp) : earliest, now.getTime())
         : dateFilter === 'last7'
         ? now.getTime() - 7 * 24 * 60 * 60 * 1000
         : dateFilter === 'last30'
@@ -424,21 +657,21 @@ export default function OrdersPage() {
           ? second.createdAtTimestamp - first.createdAtTimestamp
           : first.createdAtTimestamp - second.createdAtTimestamp
       );
-  }, [dateFilter, filter, locationFilter, orders, sortOption]);
+  }, [dateFilter, filter, locationFilter, orders, restaurantDayStart, sortOption]);
 
   // Group orders by Calendar Date with relative labels (Today, Yesterday, etc.)
   const groupedOrders = useMemo<DateGroup[]>(() => {
     const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayKey = restaurantDayKey(today, restaurantDayStart);
 
-    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-    const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayKey = restaurantDayKey(yesterday, restaurantDayStart);
 
     const groupsMap = new Map<string, Order[]>();
 
     visibleOrders.forEach((order) => {
       const d = new Date(order.createdAtTimestamp);
-      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dateKey = restaurantDayKey(d, restaurantDayStart);
 
       if (!groupsMap.has(dateKey)) {
         groupsMap.set(dateKey, []);
@@ -475,6 +708,7 @@ export default function OrdersPage() {
         Preparing: 0,
         Ready: 0,
         Delivered: 0,
+        Cancelled: 0,
       };
       groupOrders.forEach((o) => {
         statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
@@ -497,7 +731,7 @@ export default function OrdersPage() {
         ? b.dateTimestamp - a.dateTimestamp
         : a.dateTimestamp - b.dateTimestamp
     );
-  }, [visibleOrders, sortOption]);
+  }, [restaurantDayStart, visibleOrders, sortOption]);
 
   const now = new Date();
   const currentMonthOrders = orders.filter((order) => {
@@ -536,6 +770,19 @@ export default function OrdersPage() {
             <p className="mt-1 text-sm opacity-75">
               Live orders grouped by date with real-time status updates and thermal receipt printing.
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span className="rounded-xl border px-3 py-2 text-xs font-bold" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)' }}>
+                Delivery fee: {currency}{formatPrice(deliveryFee)}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setDeliveryFeeDraft(String(deliveryFee)); setShowDeliveryFeeEditor(true); }}
+                className="rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white"
+                style={{ background: 'var(--portal-accent)' }}
+              >
+                Edit delivery fee
+              </button>
+            </div>
           </div>
 
           <div
@@ -879,17 +1126,30 @@ export default function OrdersPage() {
                                   · {order.createdAt}
                                 </p>
 
-                                {order.address ? (
-                                  <>
-                                    <p className="font-semibold text-emerald-600">
-                                      📍 Delivery: {order.address}
-                                    </p>
-                                    {order.customerPhone && (
-                                      <p className="font-semibold opacity-85">
-                                        ☎️ {order.customerPhone}
-                                      </p>
-                                    )}
-                                  </>
+                                {order.location === 'Delivery' ? (
+                                  <div className="mt-3 grid max-w-xl gap-2 sm:grid-cols-3">
+                                    <div className="flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)' }}>
+                                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60" />
+                                      <div className="min-w-0">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.12em] opacity-55">Address</p>
+                                        <p className="mt-0.5 truncate text-xs font-semibold">{order.address || 'Not provided'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)' }}>
+                                      <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60" />
+                                      <div className="min-w-0">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.12em] opacity-55">Phone</p>
+                                        <p className="mt-0.5 truncate text-xs font-semibold">{order.customerPhone || 'Not provided'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)' }}>
+                                      <DollarSign className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60" />
+                                      <div className="min-w-0">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.12em] opacity-55">Delivery fee</p>
+                                        <p className="mt-0.5 text-xs font-black">{currency}{formatPrice(order.deliveryFee > 0 ? order.deliveryFee : deliveryFee)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
                                 ) : order.table ? (
                                   <p className="font-semibold">🍽️ Table: {order.table}</p>
                                 ) : null}
@@ -930,6 +1190,27 @@ export default function OrdersPage() {
                               >
                                 <Printer className="h-3.5 w-3.5" /> Print Receipt
                               </button>
+
+                              {order.status !== 'Cancelled' && (
+                                <button
+                                  type="button"
+                                  onClick={() => openOrderEditor(order)}
+                                  className="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.1em]"
+                                  style={{ borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" /> Edit Order
+                                </button>
+                              )}
+
+                              {order.status !== 'Cancelled' && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setCancelOrder(order); setCancelCode(''); setError(''); }}
+                                  className="rounded-xl border border-red-500/30 px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-red-600 transition hover:bg-red-500/10"
+                                >
+                                  Cancel Order
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -1064,7 +1345,14 @@ export default function OrdersPage() {
                   address: printOrder.address,
                   channel: printOrder.channel,
                   createdAt: printOrder.createdAt,
-                  total: printOrder.total,
+                  total: printOrder.total + (
+                    isFeeEligibleOrder(printOrder) && printOrder.deliveryFee <= 0
+                      ? deliveryFee
+                      : 0
+                  ),
+                  deliveryFee: isFeeEligibleOrder(printOrder)
+                    ? (printOrder.deliveryFee > 0 ? printOrder.deliveryFee : deliveryFee)
+                    : 0,
                   currency,
                   items: printOrder.items,
                 }}
@@ -1094,6 +1382,107 @@ export default function OrdersPage() {
                 <Printer className="h-4 w-4" />
                 {printing ? 'Printing...' : 'Confirm & Print'}
               </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {cancelOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171613]/70 px-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" className="w-full max-w-md rounded-[28px] border p-6 shadow-2xl" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)', color: 'var(--portal-text)' }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-600">Protected action</p>
+                <h2 className="mt-1 text-2xl font-black">Cancel Order #{cancelOrder.orderNumber}</h2>
+                <p className="mt-2 text-sm opacity-70">Enter the owner&apos;s cancellation code to continue.</p>
+              </div>
+              <button type="button" aria-label="Close cancellation dialog" onClick={() => setCancelOrder(null)} className="rounded-xl border p-2" style={{ borderColor: 'var(--portal-border)' }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              autoFocus
+              type="password"
+              value={cancelCode}
+              onChange={(event) => setCancelCode(event.target.value)}
+              placeholder="Cancellation code"
+              className="mt-5 w-full rounded-2xl border px-4 py-3 text-sm outline-none"
+              style={{ background: 'var(--portal-background)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }}
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setCancelOrder(null)} className="rounded-2xl border px-5 py-3 text-xs font-black uppercase tracking-[0.1em]" style={{ borderColor: 'var(--portal-border)' }}>Keep Order</button>
+              <button type="button" disabled={cancelling || !cancelCode.trim()} onClick={executeCancellation} className="rounded-2xl bg-red-600 px-5 py-3 text-xs font-black uppercase tracking-[0.1em] text-white disabled:opacity-50">{cancelling ? 'Checking...' : 'Confirm Cancellation'}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showDeliveryFeeEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171613]/70 px-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" className="w-full max-w-md rounded-[28px] border p-6 shadow-2xl" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)', color: 'var(--portal-text)' }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--portal-accent)' }}>Protected setting</p>
+                <h2 className="mt-1 text-2xl font-black">Delivery fee</h2>
+                <p className="mt-2 text-sm opacity-70">This amount applies to new delivery orders. Enter the cancellation code to save it.</p>
+              </div>
+              <button type="button" aria-label="Close delivery fee dialog" onClick={() => setShowDeliveryFeeEditor(false)} className="rounded-xl border p-2" style={{ borderColor: 'var(--portal-border)' }}><X className="h-4 w-4" /></button>
+            </div>
+            <label className="mt-5 block text-xs font-black uppercase tracking-[0.12em] opacity-70">Amount</label>
+            <input type="number" min="0" step="0.01" value={deliveryFeeDraft} onChange={(event) => setDeliveryFeeDraft(event.target.value)} className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none" style={{ background: 'var(--portal-background)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }} />
+            <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] opacity-70">Code</label>
+            <input autoFocus type="password" value={deliveryFeeCode} onChange={(event) => setDeliveryFeeCode(event.target.value)} placeholder="Code" className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none" style={{ background: 'var(--portal-background)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }} />
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setShowDeliveryFeeEditor(false)} className="rounded-2xl border px-5 py-3 text-xs font-black uppercase tracking-[0.1em]" style={{ borderColor: 'var(--portal-border)' }}>Cancel</button>
+              <button type="button" disabled={savingDeliveryFee || !deliveryFeeCode.trim()} onClick={saveDeliveryFee} className="rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.1em] text-white disabled:opacity-50" style={{ background: 'var(--portal-accent)' }}>{savingDeliveryFee ? 'Checking...' : 'Save fee'}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {editOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#171613]/70 px-4 py-6 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" className="my-auto w-full max-w-2xl rounded-[28px] border p-6 shadow-2xl" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)', color: 'var(--portal-text)' }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--portal-accent)' }}>Protected action</p>
+                <h2 className="mt-1 text-2xl font-black">Edit Order #{editOrder.orderNumber}</h2>
+                <p className="mt-2 text-sm opacity-70">Change quantities, prices, items, or add sauces and extras. The cancellation code is required to save.</p>
+              </div>
+              <button type="button" aria-label="Close order editor" onClick={() => setEditOrder(null)} className="rounded-xl border p-2" style={{ borderColor: 'var(--portal-border)' }}><X className="h-4 w-4" /></button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {editItems.map((item, index) => (
+                <div key={`${item.menuItemId}-${index}`} className="rounded-2xl border p-3" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-background)' }}>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_auto]">
+                    <select value={item.menuItemId} onChange={(event) => setEditItems((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, menuItemId: event.target.value, extraIds: [] } : entry))} className="rounded-xl border px-3 py-2 text-sm outline-none" aria-label="Menu item" style={{ background: 'var(--portal-surface)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }}>
+                      <option value="">Choose menu item</option>
+                      {menuItems.map((menuItem) => <option key={menuItem.id} value={menuItem.id}>{menuItem.name} - {currency}{formatPrice(menuItem.price)}</option>)}
+                    </select>
+                    <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => setEditItems((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, quantity: Math.max(1, Number(event.target.value) || 1) } : entry))} className="rounded-xl border px-3 py-2 text-sm outline-none" aria-label="Quantity" style={{ background: 'var(--portal-surface)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }} />
+                    <button type="button" aria-label="Remove item" onClick={() => setEditItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="flex items-center justify-center rounded-xl border px-3 py-2 text-red-600" style={{ borderColor: 'var(--portal-border)' }}><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                  {(menuItems.find((menuItem) => menuItem.id === item.menuItemId)?.extras.length || 0) > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {menuItems.find((menuItem) => menuItem.id === item.menuItemId)?.extras.map((extra) => (
+                        <label key={extra.id} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold" style={{ borderColor: 'var(--portal-border)', background: 'var(--portal-surface)' }}>
+                          <input type="checkbox" checked={item.extraIds.includes(extra.id)} onChange={(event) => setEditItems((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, extraIds: event.target.checked ? [...entry.extraIds, extra.id] : entry.extraIds.filter((extraId) => extraId !== extra.id) } : entry))} className="h-3.5 w-3.5 rounded accent-blue-600" />
+                          {extra.name} +{currency}{formatPrice(extra.price)}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button type="button" onClick={() => setEditItems((current) => [...current, { menuItemId: '', quantity: 1, extraIds: [] }])} className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-[0.1em]" style={{ borderColor: 'var(--portal-border)' }}><Plus className="h-4 w-4" /> Add menu item</button>
+
+            <input autoFocus={editItems.length === 0} type="password" value={editCode} onChange={(event) => setEditCode(event.target.value)} placeholder="Cancellation code" className="mt-5 w-full rounded-2xl border px-4 py-3 text-sm outline-none" style={{ background: 'var(--portal-background)', borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }} />
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setEditOrder(null)} className="rounded-2xl border px-5 py-3 text-xs font-black uppercase tracking-[0.1em]" style={{ borderColor: 'var(--portal-border)' }}>Cancel</button>
+              <button type="button" disabled={savingEdit || !editCode.trim() || editItems.length === 0} onClick={saveOrderEdit} className="rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.1em] text-white disabled:opacity-50" style={{ background: 'var(--portal-accent)' }}>{savingEdit ? 'Checking...' : 'Save order changes'}</button>
             </div>
           </section>
         </div>

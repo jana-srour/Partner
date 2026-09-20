@@ -56,6 +56,8 @@ export type ReceiptTemplateConfig = {
 
   // Totals & Financials
   showSubtotal: boolean;
+  showDeliveryFee: boolean;
+  deliveryFeeLabel: string;
   taxRate: number; // percentage e.g. 5, 10
   showTax: boolean;
   taxLabel: string;
@@ -87,7 +89,7 @@ export type ReceiptTemplateConfig = {
 };
 
 export const defaultReceiptTemplate: ReceiptTemplateConfig = {
-  storeName: 'Nova Restaurant & Bar',
+  storeName: 'The Partner',
   tagline: 'Artisan Food & Drinks',
   address: '100 Gourmet Plaza, Downtown',
   phone: '+1 (555) 019-2834',
@@ -117,6 +119,8 @@ export const defaultReceiptTemplate: ReceiptTemplateConfig = {
   dividerStyle: 'dashes',
 
   showSubtotal: true,
+  showDeliveryFee: true,
+  deliveryFeeLabel: 'Delivery fee',
   taxRate: 8.5,
   showTax: true,
   taxLabel: 'Tax (8.5%)',
@@ -128,7 +132,7 @@ export const defaultReceiptTemplate: ReceiptTemplateConfig = {
   paymentMethod: 'Credit Card / Cash',
   showItemCount: true,
 
-  footerMessage: 'Thank you for choosing NovaMenu!\nPlease visit us again soon.',
+  footerMessage: 'Thank you for choosing The Partner!\nPlease visit us again soon.',
   showFooterMessage: true,
   wifiInfo: 'Guest Wi-Fi: NovaGuest  Pass: welcome123',
   showWifiInfo: true,

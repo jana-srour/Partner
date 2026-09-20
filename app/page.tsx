@@ -47,8 +47,8 @@ export default function Home() {
               }}
             >
               <img
-                src="/novamenu-icon.jpeg"
-                alt="NOVAMENU"
+                src="/thepartner-icon.png"
+                alt="The Partner"
                 className="h-full w-full object-cover"
               />
 
@@ -57,7 +57,7 @@ export default function Home() {
 
             <div className="leading-none">
               <p className="text-[11px] font-black tracking-[0.34em] text-white">
-                NOVAMENU
+                The Partner
               </p>
 
               <p className="mt-1 text-[8px] font-medium uppercase tracking-[0.25em] text-white/35">
@@ -141,7 +141,7 @@ export default function Home() {
             </h1>
 
             <p className="mx-auto mt-8 max-w-2xl text-base leading-7 text-white/45 sm:text-lg">
-              NOVAMENU brings your digital menu, QR experience, customer
+              The Partner brings your digital menu, QR experience, customer
               ordering, and restaurant operations into one beautifully
               connected platform.
             </p>
@@ -207,7 +207,7 @@ export default function Home() {
                 </div>
 
                 <div className="hidden rounded-full border border-white/[0.07] px-4 py-1 text-[8px] tracking-[0.2em] text-white/20 sm:block">
-                  NOVAMENU WORKSPACE
+                  THE PARTNER WORKSPACE
                 </div>
 
                 <div className="h-2 w-16 rounded-full bg-white/[0.05]" />
@@ -502,7 +502,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full">
               <img
-                src="/novamenu-icon.jpeg"
+                src="/thepartner-icon.png"
                 alt="NOVAMENU"
                 className="h-full w-full object-cover"
               />
@@ -510,7 +510,7 @@ export default function Home() {
 
             <div>
               <p className="text-[9px] font-black tracking-[0.3em] text-white/65">
-                NOVAMENU
+                  The Partner
               </p>
 
               <p className="mt-1 text-[8px] text-white/25">

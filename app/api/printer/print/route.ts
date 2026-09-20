@@ -18,6 +18,7 @@ type PrintRequest = {
     channel?: string;
     createdAt: string;
     total: number;
+    deliveryFee?: number;
     currency: string;
     items: Array<{ name: string; qty: number; price: number }>;
   };
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
   }
 
   receiptLines.push(boldOn, doubleSize);
-  receiptLines.push(line(template?.storeName || 'NOVAMENU'));
+  receiptLines.push(line(template?.storeName || 'The Partner'));
   receiptLines.push(boldOff, normalSize);
 
   if (template?.tagline) {
@@ -163,6 +164,20 @@ export async function POST(request: Request) {
     const label = template.serviceChargeLabel || `Service (${template.serviceChargeRate}%)`;
     const spaces = Math.max(1, width - label.length - order.currency.length - scAmount.length);
     receiptLines.push(line(`${label}:${' '.repeat(spaces)}${order.currency}${scAmount}`));
+  }
+
+  const normalizedChannel = order.channel?.trim().toLowerCase().replace(/[-_]/g, ' ');
+  const isDeliveryOrder =
+    normalizedChannel === 'delivery' ||
+    normalizedChannel === 'takeaway' ||
+    normalizedChannel === 'take away' ||
+    Boolean(order.address);
+
+  if (template?.showDeliveryFee !== false && isDeliveryOrder && Number(order.deliveryFee || 0) > 0) {
+    const feeText = `${order.currency}${Number(order.deliveryFee).toFixed(2)}`;
+    const label = `${template?.deliveryFeeLabel || 'Delivery fee'}:`;
+    const spaces = Math.max(1, width - label.length - feeText.length);
+    receiptLines.push(line(`${label}${' '.repeat(spaces)}${feeText}`));
   }
 
   receiptLines.push(boldOn, doubleSize);

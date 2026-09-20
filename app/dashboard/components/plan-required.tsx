@@ -25,7 +25,7 @@ export function PlanRequired({
 
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
           Your current plan does not include {featureName}. Upgrade your
-          NOVAMENU plan to unlock this feature.
+          The Partner plan to unlock this feature.
         </p>
 
         <Link

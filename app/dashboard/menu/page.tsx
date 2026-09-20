@@ -2785,14 +2785,16 @@ export default function MenuManagementPage() {
 
           <div className="flex items-center justify-center gap-2">
 
-            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#536DFE] to-[#765BD5] flex items-center justify-center">
-              <span className="text-white text-[8px] font-black">
-                N
-              </span>
+            <div className="w-5 h-5 overflow-hidden rounded-md">
+              <img
+                src="/thepartner-icon.png"
+                alt="The Partner"
+                className="h-full w-full object-cover"
+              />
             </div>
 
             <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
-              NOVAMENU
+              The Partner
             </span>
 
           </div>

@@ -783,12 +783,13 @@ export default function DashboardLayout({
 
         <Link href="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-3">
 
-<div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
-  <img
-    src="/novamenu-icon.jpeg"
-    alt="NOVAMENU"
-    className="h-full w-full object-contain"
-  />
+<div
+  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl p-1.5"
+  style={{
+    background: theme.portal_background,
+    border: `1px solid ${theme.portal_border}`,
+  }}
+>
 </div>
           <div>
 <div
@@ -797,7 +798,7 @@ export default function DashboardLayout({
     color: theme.portal_text,
   }}
 >
-  NOVAMENU
+  The Partner
 </div>
 <div
   className="text-[8px] font-semibold tracking-[0.16em]"
@@ -841,20 +842,32 @@ export default function DashboardLayout({
 
           <Link href="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-3">
 
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
+            <div
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl p-1.5"
+              style={{
+                background: theme.portal_background,
+                border: `1px solid ${theme.portal_border}`,
+              }}
+            >
               <img
-                src="/novamenu-icon.jpeg"
-                alt="NOVAMENU"
+                src="/thepartner-icon.png"
+                alt="The Partner"
                 className="h-full w-full object-contain"
               />
             </div>
 
             <div>
-              <div className="text-sm font-black tracking-[0.18em] text-white">
-                NOVAMENU
+              <div
+                className="text-sm font-black tracking-[0.18em]"
+                style={{ color: theme.portal_text }}
+              >
+                The Partner
               </div>
 
-              <div className="text-[9px] font-semibold tracking-[0.18em] text-white/50">
+              <div
+                className="text-[9px] font-semibold tracking-[0.18em]"
+                style={{ color: `${theme.portal_text}80` }}
+              >
                 RESTAURANT DASHBOARD
               </div>
             </div>
@@ -1040,7 +1053,7 @@ export default function DashboardLayout({
               <Info className="h-4 w-4" />
             </span>
 
-            <span>About NOVAMENU</span>
+            <span>About The Partner</span>
           </Link>
 
           {/* PUBLIC MENU */}
@@ -1281,7 +1294,7 @@ export default function DashboardLayout({
                 <Info className="h-4 w-4" />
               </span>
 
-              About NOVAMENU
+              About The Partner
             </Link>
 
 

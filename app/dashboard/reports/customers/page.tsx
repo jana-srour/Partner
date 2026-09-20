@@ -2118,7 +2118,7 @@ export default function CustomersReportPage() {
               }}
             >
               {totalCustomers === 0
-                ? 'Once customers place orders with a customer name, NOVAMENU can build customer-level activity and retention analytics.'
+                ? 'Once customers place orders with a customer name, The Partner can build customer-level activity and retention analytics.'
                 : `During ${periodLabel.toLowerCase()}, ${newCustomers.length} customers placed their first-ever order, while ${returningCustomers.length} customers placed at least two orders.`}
             </p>
           </div>
@@ -2138,7 +2138,7 @@ export default function CustomersReportPage() {
               }}
             />
 
-            Real-time customer analytics from NOVAMENU order data.
+            Real-time customer analytics from The Partner order data.
           </div>
         </section>
 

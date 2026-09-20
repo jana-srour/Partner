@@ -84,7 +84,12 @@ export default function ReportsPage() {
 
     async function loadOverview() {
       try {
-        const currentRange = getReportPeriodRange('30d');
+        const restaurantSnapshot = await getReportsData();
+        const currentRange = getReportPeriodRange(
+          '30d',
+          new Date(),
+          restaurantSnapshot?.restaurant.restaurant_day_start || '00:00'
+        );
         const currentStart = new Date(currentRange.from!);
         const currentEnd = new Date(currentRange.to!);
         const duration = currentEnd.getTime() - currentStart.getTime();
@@ -228,7 +233,7 @@ export default function ReportsPage() {
                 className="mt-3 max-w-xl text-sm leading-6"
                 style={{ color: 'var(--portal-text-muted)' }}
               >
-                Turn your NOVAMENU activity into clear business insights,
+                Turn your The Partner activity into clear business insights,
                 performance trends and actionable decisions.
               </p>
             </div>

@@ -268,8 +268,8 @@ export default function LoginPage() {
           >
 
             <img
-              src="/novamenu-icon.jpeg"
-              alt="NOVAMENU"
+              src="/thepartner-icon.png"
+              alt="The Partner"
               className="h-full w-full object-contain"
             />
 
@@ -278,7 +278,7 @@ export default function LoginPage() {
           <div>
 
             <div className="text-sm font-black tracking-[0.22em] text-white">
-              NOVAMENU
+              The Partner
             </div>
 
             <div className="text-[8px] tracking-[0.22em] text-white/35 font-semibold">
@@ -846,8 +846,8 @@ export default function LoginPage() {
                       "
                     >
                       <img
-                        src="/novamenu-icon.jpeg"
-                        alt="NOVAMENU"
+                        src="/thepartner-icon.png"
+                        alt="The Partner"
                         className="h-full w-full object-contain"
                       />
                     </div>
@@ -1211,7 +1211,7 @@ export default function LoginPage() {
                       ) : (
                         <>
                           <span>
-                            Enter NOVAMENU
+                            Enter The Partner
                           </span>
 
                           <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
@@ -1306,14 +1306,14 @@ export default function LoginPage() {
                   "
                 >
                   <img
-                    src="/novamenu-icon.jpeg"
-                    alt="NOVAMENU"
+                    src="/thepartner-icon.png"
+                            alt="The Partner"
                     className="h-full w-full object-contain"
                   />
                 </div>
 
                 <span className="text-[9px] font-bold tracking-[0.2em] text-white/25">
-                  NOVAMENU
+                            The Partner
                 </span>
 
               </div>
@@ -1345,11 +1345,11 @@ export default function LoginPage() {
         <div className="max-w-[1450px] mx-auto flex items-center justify-between">
 
           <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.16em] text-white/15">
-            NOVAMENU · DIGITAL DINING EXPERIENCE
+            The Partner · DIGITAL DINING EXPERIENCE
           </p>
 
           <p className="hidden sm:block text-[8px] tracking-[0.12em] text-white/10">
-            © {new Date().getFullYear()} NOVAMENU
+            © {new Date().getFullYear()} The Partner
           </p>
 
         </div>

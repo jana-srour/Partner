@@ -13,12 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/thepartner-icon.png",
+  },
   title: {
-    default: "NOVAMENU",
-    template: "%s | NOVAMENU",
+    default: "The Partner",
+    template: "%s | The Partner",
   },
   description:
-    "Digital restaurant menus and WhatsApp ordering powered by NOVAMENU.",
+    "Digital restaurant menus and WhatsApp ordering powered by The Partner.",
 };
 
 export default function RootLayout({

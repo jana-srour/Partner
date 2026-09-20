@@ -83,6 +83,7 @@ interface Restaurant {
   price_adjustment_direction: 'increase' | 'decrease' | null;
   price_adjustment_enabled: boolean | null;
   price_adjustment_value: number | null;
+  delivery_fee: number | null;
   ordering_options: OrderingOption[];
 }
 
@@ -577,7 +578,7 @@ export default function PublicMenuPage() {
       } = await supabase
         .from('restaurants')
         .select(
-          'id, name, description, logo_url, currency, email, whatsapp_number, phone_number, mobile_number, website_url, facebook_url, instagram_url, twitter_url, address, price_adjustment_mode, price_adjustment_direction, price_adjustment_enabled, price_adjustment_value, ordering_options'
+          'id, name, description, logo_url, currency, email, whatsapp_number, phone_number, mobile_number, website_url, facebook_url, instagram_url, twitter_url, address, price_adjustment_mode, price_adjustment_direction, price_adjustment_enabled, price_adjustment_value, delivery_fee, ordering_options'
         )
         .eq(
           'slug',
@@ -651,6 +652,7 @@ export default function PublicMenuPage() {
           price_adjustment_value:
             restaurantData.price_adjustment_value ??
             null,
+          delivery_fee: Number(restaurantData.delivery_fee) || 0,
           ordering_options:
             Array.isArray(restaurantData.ordering_options) &&
             restaurantData.ordering_options.length > 0
@@ -1083,6 +1085,9 @@ export default function PublicMenuPage() {
     }
 
     const orderId = crypto.randomUUID();
+    const deliveryFee = orderType === 'Delivery'
+      ? Math.max(0, Number(restaurant.delivery_fee) || 0)
+      : 0;
 
     const { data: createdOrder, error: orderError } =
       await supabase
@@ -1108,7 +1113,8 @@ export default function PublicMenuPage() {
               : null,
           status: 'New',
           channel,
-          total: totalPrice,
+          delivery_fee: deliveryFee,
+          total: totalPrice + deliveryFee,
         })
         .select('order_number')
         .single();
@@ -1545,7 +1551,7 @@ export default function PublicMenuPage() {
             />
 
             <img
-              src="/novamenu-icon.jpeg"
+              src="/thepartner-icon.png"
               alt="NOVAMENU"
               className="relative h-12 w-12 rounded-full object-cover"
             />
@@ -1558,7 +1564,7 @@ export default function PublicMenuPage() {
                 theme.public_text,
             }}
           >
-            NOVAMENU
+              The Partner
           </p>
 
           <div className="mt-5 flex items-center justify-center gap-2">
@@ -2077,8 +2083,8 @@ export default function PublicMenuPage() {
                 }}
               >
                 <img
-                  src="/novamenu-icon.jpeg"
-                  alt="NOVAMENU"
+                  src="/thepartner-icon.png"
+                  alt="The Partner"
                   className="h-full w-full object-cover"
                 />
 
@@ -2104,7 +2110,7 @@ export default function PublicMenuPage() {
                     `,
                   }}
                 >
-                  NOVAMENU
+                  The Partner
                 </p>
 
                 <p
@@ -5014,8 +5020,8 @@ export default function PublicMenuPage() {
                       }}
                     >
                       <img
-                        src="/novamenu-icon.jpeg"
-                        alt="NOVAMENU"
+                        src="/thepartner-icon.png"
+                        alt="The Partner"
                         className="h-full w-full object-cover"
                       />
 
@@ -5034,7 +5040,7 @@ export default function PublicMenuPage() {
                         `0 0 20px ${theme.public_accent}18`,
                     }}
                   >
-                    NOVAMENU
+                    The Partner
                   </p>
 
 

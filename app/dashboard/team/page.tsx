@@ -3800,7 +3800,7 @@ export default function TeamPage() {
                   opacity: 0.55,
                 }}
               >
-                NOVAMENU
+                The Partner
               </span>
             </div>
 

@@ -21,6 +21,10 @@ import { subscribeRestaurantRealtime } from '@/lib/live-sync';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
 import { PlanRequired } from '@/app/dashboard/components/plan-required';
 import {
+  getCurrentRestaurantDayBounds,
+  restaurantDayKey,
+} from '@/lib/restaurant-day';
+import {
   subscriptionAllows,
   type BillingPlan,
   type SubscriptionStatus,
@@ -57,6 +61,7 @@ type DashboardData = {
     slug: string;
     currency: string;
     logo_url: string | null;
+    restaurant_day_start?: string | null;
   };
   categories: number;
   items: number;
@@ -79,14 +84,6 @@ type TrendPoint = {
 };
 
 type ChartView = '7d' | '30d' | 'monthly' | 'yearly';
-
-function localDayKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
 
 function isActivePromotion(item: PromoItemRow, now = Date.now()) {
   if (
@@ -167,10 +164,12 @@ export default function DashboardPage() {
   const [planAllowed, setPlanAllowed] = useState(true);
   const [chartView, setChartView] = useState<ChartView>('7d');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [restaurantDayTick, setRestaurantDayTick] = useState(0);
 
   useEffect(() => {
     let active = true;
     let unsubscribeRealtime: (() => void) | undefined;
+    let dayRefreshInterval: number | undefined;
 
     const start = async () => {
       const { data: auth } = await supabase.auth.getUser();
@@ -243,7 +242,7 @@ export default function DashboardPage() {
         ] = await Promise.all([
           supabase
             .from('restaurants')
-            .select('id, name, slug, currency, logo_url')
+            .select('id, name, slug, currency, logo_url, restaurant_day_start')
             .eq('id', restaurantId)
             .single(),
 
@@ -350,8 +349,8 @@ export default function DashboardPage() {
         );
 
         if (restaurantResult.data) {
-          setData({
-            restaurant: restaurantResult.data,
+            setData({
+              restaurant: restaurantResult.data,
             categories: categoriesResult.count || 0,
             items: itemsResult.count || 0,
             availableItems: availableResult.count || 0,
@@ -418,6 +417,10 @@ export default function DashboardPage() {
 
       setLoading(false);
 
+      dayRefreshInterval = window.setInterval(() => {
+        void refreshStats();
+      }, 60_000);
+
       const previousCleanup = unsubscribeRealtime;
       unsubscribeRealtime = () => {
         previousCleanup();
@@ -430,10 +433,50 @@ export default function DashboardPage() {
       active = false;
 
       unsubscribeRealtime?.();
+      if (dayRefreshInterval !== undefined) {
+        window.clearInterval(dayRefreshInterval);
+      }
     };
   }, []);
 
   const stats = data;
+
+  useEffect(() => {
+    if (!data?.restaurant?.restaurant_day_start) {
+      return;
+    }
+
+    const dayStart = data.restaurant.restaurant_day_start;
+
+    const scheduleNextRestaurantDay = () => {
+      const bounds = getCurrentRestaurantDayBounds(
+        new Date(),
+        dayStart
+      );
+
+      const now = Date.now();
+      const boundary = bounds.end.getTime();
+
+      // Refresh slightly after the exact boundary so that
+      // the new restaurant day is definitely active.
+      const delay = Math.max(boundary - now + 100, 100);
+
+      const timer = window.setTimeout(() => {
+        setRestaurantDayTick((value) => value + 1);
+
+        // Schedule the following restaurant day.
+        scheduleNextRestaurantDay();
+      }, delay);
+
+      return timer;
+    };
+
+    const timer = scheduleNextRestaurantDay();
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [data?.restaurant?.restaurant_day_start]);
 
   /*
    * =========================================================
@@ -523,23 +566,51 @@ export default function DashboardPage() {
       });
     }
 
-    // 7d or 30d — one point per day
+    // 7d or 30d — one point per RESTAURANT BUSINESS DAY
     const days = chartView === '30d' ? 30 : 7;
+
+    const dayStart = stats?.restaurant.restaurant_day_start || '00:00';
+
+    const currentBounds = getCurrentRestaurantDayBounds(
+      new Date(),
+      dayStart
+    );
+
     return Array.from({ length: days }, (_, index) => {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - (days - 1 - index));
+      const offset = days - 1 - index;
 
-      const key = localDayKey(date);
-
-      const orders = trackedOrders.filter(
-        (order) => localDayKey(new Date(order.created_at)) === key
+      const pointDate = new Date(
+        currentBounds.start.getTime() - offset * 24 * 60 * 60 * 1000
       );
 
+      const bounds = getCurrentRestaurantDayBounds(
+        pointDate,
+        dayStart
+      );
+
+      const key = restaurantDayKey(
+        bounds.start,
+        dayStart
+      );
+
+      const orders = trackedOrders.filter((order) => {
+        const createdAt = new Date(order.created_at).getTime();
+
+        return (
+          createdAt >= bounds.start.getTime() &&
+          createdAt < bounds.end.getTime()
+        );
+      });
+
       const pricing =
-        stats?.pricingHistory.filter(
-          (entry) => localDayKey(new Date(entry.created_at)) === key
-        ) || [];
+        stats?.pricingHistory.filter((entry) => {
+          const createdAt = new Date(entry.created_at).getTime();
+
+          return (
+            createdAt >= bounds.start.getTime() &&
+            createdAt < bounds.end.getTime()
+          );
+        }) || [];
 
       const revenue = orders.reduce(
         (sum, order) => sum + Number(order.total || 0),
@@ -548,12 +619,17 @@ export default function DashboardPage() {
 
       return {
         key,
-        date,
+        date: bounds.start,
         label:
           chartView === '30d'
-            ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-            : date.toLocaleDateString(undefined, { weekday: 'short' }),
-        fullLabel: date.toLocaleDateString(undefined, {
+            ? bounds.start.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              })
+            : bounds.start.toLocaleDateString(undefined, {
+                weekday: 'short',
+              }),
+        fullLabel: bounds.start.toLocaleDateString(undefined, {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
@@ -563,8 +639,13 @@ export default function DashboardPage() {
         pricing: pricing.length,
       };
     });
-  }, [stats?.orders, stats?.pricingHistory, chartView]);
-
+      }, [
+    stats?.orders,
+    stats?.pricingHistory,
+    stats?.restaurant,
+    chartView,
+    restaurantDayTick,
+  ]);
   /*
    * =========================================================
    * ANALYTICS METRICS
@@ -660,14 +741,21 @@ export default function DashboardPage() {
     );
   }
 
-  const today = localDayKey(new Date());
-
   const trackedOrders = stats.orders.filter(
     (order) => !isCancelledOrder(order)
   );
 
+  const currentRestaurantDay = getCurrentRestaurantDayBounds(
+    new Date(),
+    stats.restaurant.restaurant_day_start || '00:00'
+  );
+
   const todayOrders = trackedOrders.filter(
-    (order) => localDayKey(new Date(order.created_at)) === today
+    (order) => {
+      const createdAt = new Date(order.created_at).getTime();
+      return createdAt >= currentRestaurantDay.start.getTime() &&
+        createdAt < currentRestaurantDay.end.getTime();
+    }
   );
 
   const todayRevenue = todayOrders.reduce(
@@ -679,31 +767,30 @@ export default function DashboardPage() {
     ? todayRevenue / todayOrders.length
     : 0;
 
-  const newOrders = stats.orders.filter(
+  const newOrders = todayOrders.filter(
     (order) => order.status === 'New'
   ).length;
 
-  const preparing = stats.orders.filter(
+  const preparing = todayOrders.filter(
     (order) => order.status === 'Preparing'
   ).length;
 
-  const ready = stats.orders.filter(
+  const ready = todayOrders.filter(
     (order) => order.status === 'Ready'
   ).length;
 
-  const delivered = stats.orders.filter(
+  const delivered = todayOrders.filter(
     (order) => order.status === 'Delivered'
   ).length;
 
-  const cancelled = stats.orders.filter(
+  const cancelled = todayOrders.filter(
     (order) =>
       order.status.toLowerCase() === 'cancelled' ||
       order.status.toLowerCase() === 'canceled'
   ).length;
 
   const attentionCount = newOrders + preparing;
-
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const weekAgo = currentRestaurantDay.start.getTime() - 7 * 24 * 60 * 60 * 1000;
 
   const weeklyOrders = trackedOrders.filter(
     (order) => new Date(order.created_at).getTime() >= weekAgo

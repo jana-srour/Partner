@@ -6,6 +6,7 @@ import {
   Check,
   Clipboard,
   DollarSign,
+  RefreshCw,
   Palette,
   Sparkles,
   AlertTriangle,
@@ -118,6 +119,10 @@ export default function SettingsPage() {
 
   const [markupValue, setMarkupValue] =
     useState('5');
+
+  const [cancellationCode, setCancellationCode] = useState('');
+  const [cancellationCodeConfigured, setCancellationCodeConfigured] = useState(false);
+  const [restaurantDayStart, setRestaurantDayStart] = useState('00:00');
 
   const [loading, setLoading] =
     useState(true);
@@ -323,6 +328,10 @@ export default function SettingsPage() {
               '0'
           )
         );
+
+        setRestaurantDayStart(String(restaurant.restaurant_day_start || '00:00:00').slice(0, 5));
+        setCancellationCodeConfigured(Boolean(restaurant.order_cancellation_code_hash));
+        setCancellationCode(restaurant.order_cancellation_code || '');
       }
 
       const nextTheme =
@@ -474,6 +483,9 @@ export default function SettingsPage() {
                   '0'
               )
             );
+            setRestaurantDayStart(String(restaurant.restaurant_day_start || '00:00:00').slice(0, 5));
+            setCancellationCodeConfigured(Boolean(restaurant.order_cancellation_code_hash));
+            setCancellationCode(restaurant.order_cancellation_code || '');
           }
 
           if (!historyResult.error) {
@@ -639,6 +651,8 @@ export default function SettingsPage() {
         markupEnabled,
       price_adjustment_value:
         Number(markupValue) || 0,
+      restaurant_day_start: `${restaurantDayStart}:00`,
+      order_cancellation_code: isOwner ? cancellationCode.trim() : undefined,
     };
 
     const { error } =
@@ -709,6 +723,27 @@ export default function SettingsPage() {
         'Price automation history save failed:',
         historyError
       );
+    }
+
+    if (isOwner) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.access_token && cancellationCode.trim()) {
+        const securityResponse = await fetch('/api/settings/order-security', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ restaurantId, code: cancellationCode.trim() }),
+        });
+        const securityResult = await securityResponse.json();
+        if (!securityResponse.ok) {
+          setSaving(false);
+          setBusinessInfoMessage(securityResult.error || 'Could not save cancellation code.');
+          return;
+        }
+        setCancellationCodeConfigured(true);
+      }
     }
 
     const nextHistory =
@@ -1570,6 +1605,53 @@ export default function SettingsPage() {
                         )}
                       </select>
                     </div>
+
+                    {isOwner && (
+                      <div className="md:col-span-2 grid gap-4 rounded-2xl border p-4 sm:grid-cols-2" style={{ borderColor: theme.portal_border, background: theme.portal_background }}>
+                        <div>
+                          <label className="mb-2 block text-[9px] font-black uppercase tracking-[0.16em] text-[#756F66]">
+                            Restaurant day starts
+                          </label>
+                          <input
+                            type="time"
+                            value={restaurantDayStart}
+                            onChange={(event) => setRestaurantDayStart(event.target.value)}
+                            disabled={!isEditing}
+                            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none disabled:opacity-70"
+                            style={{ background: theme.portal_surface, borderColor: theme.portal_border, color: theme.portal_text }}
+                          />
+                          <p className="mt-2 text-xs opacity-70">Sales and daily totals reset at this time.</p>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[9px] font-black uppercase tracking-[0.16em] text-[#756F66]">
+                            Order cancellation code
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={cancellationCode}
+                              onChange={(event) => setCancellationCode(event.target.value)}
+                              placeholder={cancellationCodeConfigured ? 'Code configured' : 'Set a private code'}
+                              disabled={!isEditing}
+                              minLength={4}
+                              className="min-w-0 flex-1 rounded-2xl border px-4 py-3 text-sm outline-none disabled:opacity-70"
+                              style={{ background: theme.portal_surface, borderColor: theme.portal_border, color: theme.portal_text }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCancellationCode(Math.random().toString(36).slice(2, 10).toUpperCase())}
+                              disabled={!isEditing}
+                              aria-label="Generate cancellation code"
+                              className="rounded-2xl border px-3 transition disabled:opacity-50"
+                              style={{ borderColor: theme.portal_border, color: theme.portal_text }}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <p className="mt-2 text-xs opacity-70">Workers must enter this code before an order can be cancelled.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {isEditing && (

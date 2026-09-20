@@ -437,7 +437,7 @@ export async function POST(request: Request) {
           await supabase
             .from('restaurant_subscriptions')
             .update({
-              status: 'canceled',
+              status: 'cancelled',
               updated_at:
                 new Date().toISOString(),
             })

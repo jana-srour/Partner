@@ -20,7 +20,7 @@ export function AccessRestricted({
 
         <div className="mt-6">
           <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: 'var(--portal-accent)' }}>
-            NOVAMENU
+            The Partner
           </div>
 
           <h1 className="mt-3 text-2xl sm:text-3xl font-black tracking-tight" style={{ color: 'var(--portal-text)' }}>

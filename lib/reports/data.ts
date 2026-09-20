@@ -1,4 +1,8 @@
 import { supabase } from '@/lib/supabase';
+import {
+  getCurrentRestaurantDayBounds,
+  normalizeRestaurantDayStart,
+} from '@/lib/restaurant-day';
 
 export type ReportDateRange = {
   from?: string;
@@ -11,6 +15,7 @@ export type ReportRestaurant = {
   slug: string;
   currency: string;
   logo_url: string | null;
+  restaurant_day_start?: string | null;
 };
 
 export type ReportCategory = {
@@ -115,26 +120,22 @@ export type ReportsData = {
 export function getReportPeriodRange(
   period: '7d' | '30d' | '90d' | '12m',
   anchor = new Date(),
+  dayStart = '00:00',
 ): ReportDateRange {
-  const start = new Date(
-    anchor.getFullYear(),
-    anchor.getMonth(),
-    anchor.getDate(),
+  const currentDay = getCurrentRestaurantDayBounds(
+    anchor,
+    normalizeRestaurantDayStart(dayStart)
   );
-  const end = new Date(
-    anchor.getFullYear(),
-    anchor.getMonth(),
-    anchor.getDate() + 1,
-  );
+  const start = new Date(currentDay.start);
+  const end = new Date(currentDay.end);
 
   if (period === '7d') {
-    start.setDate(start.getDate() - 6);
+    start.setTime(start.getTime() - 6 * 24 * 60 * 60 * 1000);
   } else if (period === '30d') {
-    start.setDate(start.getDate() - 29);
+    start.setTime(start.getTime() - 29 * 24 * 60 * 60 * 1000);
   } else if (period === '90d') {
-    start.setDate(start.getDate() - 89);
+    start.setTime(start.getTime() - 89 * 24 * 60 * 60 * 1000);
   } else {
-    start.setDate(1);
     start.setMonth(start.getMonth() - 11);
   }
 
@@ -238,7 +239,7 @@ export async function getReportsData(
     supabase
       .from('restaurants')
       .select(
-        'id, name, slug, currency, logo_url'
+        'id, name, slug, currency, logo_url, restaurant_day_start'
       )
       .eq('id', restaurantId)
       .single(),
