@@ -1,12 +1,12 @@
-# NOVAMENU
+# PARTNER
 
-**NOVAMENU** is a proprietary restaurant technology platform developed by **Novera Labs**.
+**PARTNER** is a proprietary restaurant technology platform developed by **Novera Labs**.
 
 The platform is designed to help restaurants build a modern digital menu experience while bringing essential customer-facing and restaurant management capabilities together in one unified system.
 
 ## Product Overview
 
-NOVAMENU provides restaurants with a digital platform for presenting their menus, connecting with customers, managing orders, maintaining restaurant content, and controlling their digital operations.
+PARTNER provides restaurants with a digital platform for presenting their menus, connecting with customers, managing orders, maintaining restaurant content, and controlling their digital operations.
 
 The platform combines a **customer-facing digital menu** with a **private restaurant management workspace**, allowing restaurants to manage their digital presence from a centralized environment.
 
@@ -52,13 +52,13 @@ The management platform provides tools for day-to-day restaurant operations, inc
 
 ### Restaurant Branding
 
-NOVAMENU is designed to adapt to each restaurant rather than presenting every business with the same generic interface.
+PARTNER is designed to adapt to each restaurant rather than presenting every business with the same generic interface.
 
 Restaurants can customize elements of their digital presence, including branding, visual themes, restaurant information, and customer-facing menu presentation.
 
 ## Platform Experience
 
-NOVAMENU consists of two connected experiences:
+PARTNER consists of two connected experiences:
 
 **Restaurant Workspace**
 
@@ -70,7 +70,7 @@ A customer-facing experience optimized for QR codes and mobile devices, allowing
 
 ## Subscription Model
 
-NOVAMENU operates as a SaaS platform with subscription-based access.
+PARTNER operates as a SaaS platform with subscription-based access.
 
 The current subscription structure includes:
 
@@ -86,7 +86,7 @@ Subscription access determines which restaurant management features are availabl
 
 ## Billing
 
-NOVAMENU uses **Paddle** as its payment and subscription infrastructure.
+PARTNER uses **Paddle** as its payment and subscription infrastructure.
 
 The platform supports:
 
@@ -100,7 +100,7 @@ The platform supports:
 
 ## Technology
 
-NOVAMENU is built using a modern web application stack, including:
+PARTNER is built using a modern web application stack, including:
 
 * **Next.js**
 * **React**
@@ -114,7 +114,7 @@ The platform is designed with a modular architecture that allows additional rest
 
 ## Product Philosophy
 
-NOVAMENU is built around several principles:
+PARTNER is built around several principles:
 
 **Simplicity**
 Restaurant teams should be able to manage their digital presence without unnecessary complexity.
@@ -133,7 +133,7 @@ The platform is designed to evolve from a digital menu solution into a broader r
 
 ## Security & Access
 
-NOVAMENU is proprietary commercial software.
+PARTNER is proprietary commercial software.
 
 Source code, infrastructure configuration, database architecture, internal APIs, authentication systems, billing configuration, credentials, and production systems are restricted to authorized personnel.
 
@@ -141,16 +141,10 @@ Sensitive credentials and production configuration are maintained outside the so
 
 ## Development
 
-This repository contains the source code for the NOVAMENU platform.
+This repository contains the source code for the PARTNER platform.
 
 Development, infrastructure, database, deployment, and operational procedures are intended for authorized maintainers and contributors.
 
 Detailed internal implementation and infrastructure documentation is intentionally excluded from this repository.
 
 ## Ownership
-
-NOVAMENU is proprietary software developed and owned by **Novera Labs**.
-
-Unauthorized copying, redistribution, modification, reverse engineering, or commercial use of this software is prohibited.
-
-© Novera Labs. All rights reserved.
