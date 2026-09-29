@@ -152,6 +152,7 @@ export default function BranchesPage() {
     if (!rid) return;
 
     setLoading(true);
+    setError(null);
 
     const { data, error: branchesError } = await supabase
         .from('restaurant_branches')
@@ -176,8 +177,16 @@ export default function BranchesPage() {
         .order('is_main', { ascending: false })
         .order('name', { ascending: true });
 
+    console.log('BRANCH LOAD:', {
+        restaurantId: rid,
+        data,
+        error: branchesError,
+    });
+
     if (branchesError) {
-        setError(branchesError.message);
+        setError(
+        `Could not load branches: ${branchesError.message}`,
+        );
         setBranches([]);
     } else {
         setBranches((data ?? []) as Branch[]);
@@ -547,26 +556,41 @@ export default function BranchesPage() {
   // ----------------------------------------------------------
 
   const setMainBranch = async (branch: Branch) => {
-    if (branch.is_main) return;
+    if (!restaurantId || branch.is_main) return;
 
     setError(null);
     setNotice(null);
 
+    const { error: clearError } = await supabase
+        .from('restaurant_branches')
+        .update({
+        is_main: false,
+        })
+        .eq('restaurant_id', restaurantId)
+        .eq('is_main', true);
+
+    if (clearError) {
+        setError(clearError.message);
+        return;
+    }
+
     const { error: updateError } = await supabase
-      .from('restaurant_branches')
-      .update({
+        .from('restaurant_branches')
+        .update({
         is_main: true,
-      })
-      .eq('id', branch.id)
-      .eq('restaurant_id', restaurantId);
+        })
+        .eq('id', branch.id)
+        .eq('restaurant_id', restaurantId);
 
     if (updateError) {
-      setError(updateError.message);
-      return;
+        setError(updateError.message);
+        return;
     }
 
     setNotice(`${branch.name} is now the main branch.`);
-  };
+
+    await loadBranches(restaurantId);
+    };
 
   // ----------------------------------------------------------
   // Delete
