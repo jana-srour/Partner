@@ -46,6 +46,7 @@ interface MenuItem {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  branch_ids: string[] | null;
   sort_order: number;
 
   // Discount fields
@@ -54,6 +55,12 @@ interface MenuItem {
   discount_enabled: boolean;
   discount_start_at: string | null;
   discount_end_at: string | null;
+}
+
+interface MenuBranch {
+  id: string;
+  name: string;
+  is_active: boolean;
 }
 
 interface MenuExtra {
@@ -76,6 +83,7 @@ const defaultOrderingOptions: OrderingOption[] = [
 export default function MenuManagementPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [branches, setBranches] = useState<MenuBranch[]>([]);
 
   const [menuExtras, setMenuExtras] = useState<MenuExtra[]>([]);
 
@@ -123,6 +131,8 @@ export default function MenuManagementPage() {
     category_id: '',
     image_url: '',
     is_available: true,
+    all_branches: true,
+    branch_ids: [] as string[],
 
     // Discount
     discount_enabled: false,
@@ -323,6 +333,19 @@ export default function MenuManagementPage() {
 
       setRestaurantId(id);
 
+      const { data: branchData, error: branchError } = await supabase
+        .from('restaurant_branches')
+        .select('id, name, is_active')
+        .eq('restaurant_id', id)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (branchError) {
+        setErrorMessage(branchError.message);
+        return;
+      }
+      setBranches(branchData || []);
+
       const { data: restaurantData, error: restaurantError } = await supabase
         .from('restaurants')
         .select('currency, ordering_options, price_adjustment_enabled, price_adjustment_mode, price_adjustment_direction, price_adjustment_value')
@@ -385,6 +408,7 @@ export default function MenuManagementPage() {
           price,
           image_url,
           is_available,
+          branch_ids,
           sort_order,
           discount_type,
           discount_value,
@@ -1344,6 +1368,8 @@ export default function MenuManagementPage() {
           item.image_url || '',
         is_available:
           item.is_available,
+        all_branches: !item.branch_ids || item.branch_ids.length === 0,
+        branch_ids: item.branch_ids || [],
 
         discount_enabled:
           item.discount_enabled,
@@ -1409,6 +1435,8 @@ export default function MenuManagementPage() {
           '',
         image_url: '',
         is_available: true,
+        all_branches: true,
+        branch_ids: [],
 
         discount_enabled:
           false,
@@ -1546,6 +1574,11 @@ export default function MenuManagementPage() {
       return;
     }
 
+    if (!itemForm.all_branches && itemForm.branch_ids.length === 0) {
+      setErrorMessage('Select at least one branch, or make this item available at all branches.');
+      return;
+    }
+
     // =================================================
     // DISCOUNT VALIDATION
     // =================================================
@@ -1625,6 +1658,9 @@ export default function MenuManagementPage() {
 
       is_available:
         itemForm.is_available,
+
+      branch_ids:
+        itemForm.all_branches ? null : itemForm.branch_ids,
 
       // Discount
       discount_type:
@@ -3096,6 +3132,55 @@ export default function MenuManagementPage() {
                 </div>
 
               </div>
+
+              <section className="rounded-2xl border border-[#E7E4DE] bg-[#F7F5F1] p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-black">Branch Availability</h3>
+                    <p className="mt-1 text-xs text-[#756F66]">
+                      Choose where customers can see this item.
+                    </p>
+                  </div>
+                  <label className="flex shrink-0 items-center gap-2 text-xs font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={itemForm.all_branches}
+                      onChange={(event) => setItemForm((current) => ({
+                        ...current,
+                        all_branches: event.target.checked,
+                        branch_ids: event.target.checked ? [] : current.branch_ids,
+                      }))}
+                      className="h-4 w-4 accent-[#536DFE]"
+                    />
+                    All branches
+                  </label>
+                </div>
+
+                {!itemForm.all_branches && (
+                  <div className="mt-4 grid gap-2 border-t border-[#E7E4DE] pt-3 sm:grid-cols-2">
+                    {branches.length === 0 ? (
+                      <p className="text-xs text-[#756F66]">
+                        No active branches are available. Enable a branch to assign this item.
+                      </p>
+                    ) : branches.map((branch) => (
+                      <label key={branch.id} className="flex items-center gap-2 text-xs font-medium">
+                        <input
+                          type="checkbox"
+                          checked={itemForm.branch_ids.includes(branch.id)}
+                          onChange={(event) => setItemForm((current) => ({
+                            ...current,
+                            branch_ids: event.target.checked
+                              ? [...current.branch_ids, branch.id]
+                              : current.branch_ids.filter((id) => id !== branch.id),
+                          }))}
+                          className="h-4 w-4 accent-[#536DFE]"
+                        />
+                        {branch.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               {/* =================================================
                   DISCOUNT

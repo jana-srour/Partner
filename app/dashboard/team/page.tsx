@@ -50,6 +50,7 @@ interface TeamPosition {
   can_view_dashboard: boolean;
   can_view_reports: boolean;
   can_manage_qr_studio: boolean;
+  can_manage_branches: boolean;
 }
 
 export default function TeamPage() {
@@ -159,6 +160,7 @@ export default function TeamPage() {
       can_manage_team: false,
       can_manage_settings: false,
       can_manage_qr_studio: false,
+      can_manage_branches: false,
     });
 
   const [savingPermissions, setSavingPermissions] =
@@ -1405,6 +1407,8 @@ export default function TeamPage() {
 
       can_manage_qr_studio:
         position.can_manage_qr_studio ?? false,
+      can_manage_branches:
+        position.can_manage_branches ?? false,
     });
 
     setMessage(null);
@@ -3932,6 +3936,33 @@ export default function TeamPage() {
                           can_manage_settings: e.target.checked,
                         }))
                       }
+                      className="h-4 w-4 shrink-0 cursor-pointer"
+                      style={{ accentColor: 'var(--portal-accent)' }}
+                    />
+                  </label>
+
+                  <label
+                    className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-4 transition-colors"
+                    style={{
+                      background: 'var(--portal-background)',
+                      borderColor: 'var(--portal-border)',
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold" style={{ color: 'var(--portal-text)' }}>
+                        Branch Management
+                      </p>
+                      <p className="mt-0.5 text-[11px]" style={{ color: 'var(--portal-text)', opacity: 0.5 }}>
+                        View and manage this restaurant&apos;s branches.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={permissionValues.can_manage_branches}
+                      onChange={(event) => setPermissionValues((previous) => ({
+                        ...previous,
+                        can_manage_branches: event.target.checked,
+                      }))}
                       className="h-4 w-4 shrink-0 cursor-pointer"
                       style={{ accentColor: 'var(--portal-accent)' }}
                     />

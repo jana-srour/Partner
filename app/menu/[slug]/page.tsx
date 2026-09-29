@@ -41,6 +41,12 @@ interface MenuExtra {
   is_available?: boolean;
 }
 
+interface PublicBranch {
+  id: string;
+  name: string;
+  is_main: boolean;
+}
+
 interface MenuItem {
   id: string;
   name: string;
@@ -48,6 +54,7 @@ interface MenuItem {
   price: number;
   image_url: string | null;
   category_id: string;
+  branch_ids: string[] | null;
   sort_order?: number;
   discount_type: string | null;
   discount_value: number | null;
@@ -111,6 +118,9 @@ export default function PublicMenuPage() {
 
   const [menuItems, setMenuItems] =
     useState<MenuItem[]>([]);
+
+  const [branches, setBranches] = useState<PublicBranch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
 
   const [selectedCategory, setSelectedCategory] =
     useState<string>('all');
@@ -364,6 +374,7 @@ export default function PublicMenuPage() {
           discount_enabled,
           discount_start_at,
           discount_end_at,
+          branch_ids,
           menu_item_extras (
             id,
             name,
@@ -405,6 +416,7 @@ export default function PublicMenuPage() {
         price: number;
         image_url: string | null;
         category_id: string;
+        branch_ids: string[] | null;
         sort_order?: number;
         discount_type: string | null;
         discount_value: number | null;
@@ -665,6 +677,16 @@ export default function PublicMenuPage() {
 
       setRestaurant(
         restaurantWithPricing
+      );
+
+      const branchResponse = await fetch(`/api/menu/${encodeURIComponent(slug)}/branches`);
+      const branchPayload = branchResponse.ok
+        ? await branchResponse.json() as { branches?: PublicBranch[] }
+        : { branches: [] };
+      const activeBranches = branchPayload.branches || [];
+      setBranches(activeBranches);
+      setSelectedBranchId(
+        activeBranches.find((branch) => branch.is_main)?.id || activeBranches[0]?.id || ''
       );
 
       await fetchMenu(
@@ -1095,6 +1117,7 @@ export default function PublicMenuPage() {
         .insert({
           id: orderId,
           restaurant_id: restaurant.id,
+          branch_id: selectedBranchId || null,
           customer_name:
             orderType === 'Delivery'
               ? customerName.trim()
@@ -3026,6 +3049,26 @@ export default function PublicMenuPage() {
 
         <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
 
+          {branches.length > 1 && (
+            <div className="flex flex-col gap-2 border-b py-5 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.public_border }}>
+              <label htmlFor="public-menu-branch" className="text-xs font-bold" style={{ color: theme.public_text }}>
+                Ordering from branch
+              </label>
+              <select
+                id="public-menu-branch"
+                value={selectedBranchId}
+                disabled={cart.length > 0}
+                onChange={(event) => setSelectedBranchId(event.target.value)}
+                className="min-w-0 rounded-xl border px-3 py-2 text-sm disabled:opacity-60 sm:min-w-64"
+                style={{ background: theme.public_surface, color: theme.public_text, borderColor: theme.public_border }}
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>{branch.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="py-14 sm:py-20">
 
             {categories.map(
@@ -3038,7 +3081,8 @@ export default function PublicMenuPage() {
                   menuItems.filter(
                     (item) =>
                       item.category_id ===
-                      category.id
+                      category.id &&
+                      (!item.branch_ids || item.branch_ids.length === 0 || item.branch_ids.includes(selectedBranchId))
                   );
 
                 if (

@@ -49,6 +49,7 @@ interface Permissions {
   can_manage_team: boolean;
   can_manage_settings: boolean;
   can_manage_qr_studio: boolean;
+  can_manage_branches: boolean;
 }
 
 interface Subscription {
@@ -66,6 +67,7 @@ const defaultPermissions: Permissions = {
   can_manage_team: false,
   can_manage_settings: false,
   can_manage_qr_studio: false,
+  can_manage_branches: false,
 };
 
 const isValidBillingPlan = (value: unknown): value is BillingPlan => {
@@ -139,6 +141,8 @@ export default function DashboardLayout({
         ? permissions.can_manage_menu
         : pathname.startsWith('/dashboard/team')
           ? permissions.can_manage_team
+            : pathname.startsWith('/dashboard/branches')
+              ? permissions.can_manage_branches && subscriptionAllowsPath('/dashboard/branches')
           : pathname.startsWith('/dashboard/orders')
             ? permissions.can_manage_orders
             : pathname.startsWith('/dashboard/pricing')
@@ -354,6 +358,7 @@ export default function DashboardLayout({
           can_manage_team: true,
           can_manage_settings: true,
           can_manage_qr_studio: true,
+          can_manage_branches: true,
         });
         setLoadingRestaurant(false);
         return;
@@ -376,7 +381,8 @@ export default function DashboardLayout({
             can_manage_orders,
             can_manage_team,
             can_manage_settings,
-            can_manage_qr_studio
+            can_manage_qr_studio,
+            can_manage_branches
           `)
           .eq('id', membership.position_id)
           .eq('restaurant_id', membership.restaurant_id)
@@ -407,6 +413,8 @@ export default function DashboardLayout({
 
           can_manage_qr_studio:
             roleData.can_manage_qr_studio ?? false,
+          can_manage_branches:
+            roleData.can_manage_branches ?? false,
         });
       } else {
         setPermissions(defaultPermissions);
@@ -485,6 +493,7 @@ export default function DashboardLayout({
             can_manage_team: true,
             can_manage_settings: true,
             can_manage_qr_studio: true,
+            can_manage_branches: true,
           });
           return;
         }
@@ -496,7 +505,7 @@ export default function DashboardLayout({
 
         const { data: roleData } = await supabase
           .from('restaurant_roles')
-          .select('can_view_dashboard, can_view_reports, can_manage_menu, can_manage_pricing, can_manage_orders, can_manage_team, can_manage_settings, can_manage_qr_studio')
+          .select('can_view_dashboard, can_view_reports, can_manage_menu, can_manage_pricing, can_manage_orders, can_manage_team, can_manage_settings, can_manage_qr_studio, can_manage_branches')
           .eq('id', membership.position_id)
           .eq('restaurant_id', restaurant.id)
           .maybeSingle();
@@ -510,6 +519,7 @@ export default function DashboardLayout({
           can_manage_team: roleData.can_manage_team ?? false,
           can_manage_settings: roleData.can_manage_settings ?? false,
           can_manage_qr_studio: roleData.can_manage_qr_studio ?? false,
+          can_manage_branches: roleData.can_manage_branches ?? false,
         } : defaultPermissions);
       },
     });
@@ -601,13 +611,13 @@ export default function DashboardLayout({
       locked: true,
     },
 
-    {
+    ...(permissions.can_manage_branches ? [{
       name: 'Branch Management',
       href: '/dashboard/branches',
       icon: GitBranch,
       type: 'link' as const,
       locked: !subscriptionAllowsPath('/dashboard/branches'),
-    },
+    }] : []),
 
     {
       name: 'Reports',

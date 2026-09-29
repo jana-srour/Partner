@@ -165,6 +165,11 @@ export async function GET(
           Boolean(
             position.can_manage_qr_studio
           ),
+
+        can_manage_branches:
+          Boolean(
+            position.can_manage_branches
+          ),
       },
     });
 
@@ -409,6 +414,11 @@ export async function PATCH(
       can_manage_qr_studio:
         Boolean(
           body?.can_manage_qr_studio
+        ),
+
+      can_manage_branches:
+        Boolean(
+          body?.can_manage_branches
         ),
     };
 

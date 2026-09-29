@@ -42,7 +42,7 @@ export const billingFeatureLabels: Record<BillingFeature, string> = {
     'Inventory Management (Coming Soon)',
 
   branches:
-    'Multiple Branches (Coming Soon)',
+    'Branch Management',
 };
 
 export type SubscriptionStatus =
@@ -126,7 +126,7 @@ export const billingPlans: Record<
     discount: '2+ months free',
 
     description:
-      'Advanced tools for growing and multi-branch restaurants, with centralized management, unlimited team members, dynamic pricing, inventory, and multi-location capabilities.',
+      'Advanced tools for growing restaurants, with centralized Branch Management, branch-aware menus and orders, unlimited team members, dynamic pricing, inventory, and multi-location reporting.',
 
     features: [
       'dashboard',
