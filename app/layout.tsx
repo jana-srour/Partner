@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   icons: {
-    icon: "/thepartner-icon.png",
+    icon: "/partnerlogo-icon.png",
   },
   title: {
     default: "Partner",

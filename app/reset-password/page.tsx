@@ -265,7 +265,7 @@ export default function ResetPasswordPage() {
             "
           >
             <img
-              src="/thepartner-icon.png"
+              src="/partnerlogo-icon.png"
               alt="Partner"
               className="h-full w-full object-contain"
             />
@@ -426,7 +426,7 @@ export default function ResetPasswordPage() {
                 >
 
                   <img
-                    src="/thepartner-icon.png"
+                    src="/partnerlogo-icon.png"
                     alt="Partner"
                     className="h-full w-full object-contain"
                   />

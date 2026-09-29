@@ -1551,7 +1551,7 @@ export default function PublicMenuPage() {
             />
 
             <img
-              src="/thepartner-icon.png"
+              src="/partnerlogo-icon.png"
               alt="NOVAMENU"
               className="relative h-12 w-12 rounded-full object-cover"
             />
@@ -2083,7 +2083,7 @@ export default function PublicMenuPage() {
                 }}
               >
                 <img
-                  src="/thepartner-icon.png"
+                  src="/partnerlogo-icon.png"
                   alt="Partner"
                   className="h-full w-full object-cover"
                 />
@@ -5020,7 +5020,7 @@ export default function PublicMenuPage() {
                       }}
                     >
                       <img
-                        src="/thepartner-icon.png"
+                        src="/partnerlogo-icon.png"
                         alt="Partner"
                         className="h-full w-full object-cover"
                       />

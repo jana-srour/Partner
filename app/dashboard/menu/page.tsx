@@ -2787,7 +2787,7 @@ export default function MenuManagementPage() {
 
             <div className="w-5 h-5 overflow-hidden rounded-md">
               <img
-                src="/thepartner-icon.png"
+                src="/partnerlogo-icon.png"
                 alt="Partner"
                 className="h-full w-full object-cover"
               />

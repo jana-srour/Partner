@@ -143,6 +143,8 @@ export default function DashboardLayout({
             ? permissions.can_manage_orders
             : pathname.startsWith('/dashboard/pricing')
               ? permissions.can_manage_pricing
+              : pathname === '/dashboard/settings/printers'
+                ? true
               : pathname.startsWith('/dashboard/settings')
                 ? permissions.can_manage_settings
                 : pathname.startsWith('/dashboard/qr')
@@ -151,34 +153,38 @@ export default function DashboardLayout({
 
   const renderSettingsNavigation = (closeMobile = false) => (
     <div className="mt-1 space-y-1 pl-3">
-      <Link
-        href="/dashboard/settings"
-        onClick={closeMobile ? () => setMobileOpen(false) : undefined}
-        className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition hover:opacity-90"
-        style={{
-          color:
-            pathname === '/dashboard/settings'
-              ? theme.portal_accent
-              : theme.portal_text,
-        }}
-      >
-        <UserRound className="h-4 w-4" />
-        <span>Profile</span>
-      </Link>
+      {permissions.can_manage_settings && (
+        <>
+          <Link
+            href="/dashboard/settings"
+            onClick={closeMobile ? () => setMobileOpen(false) : undefined}
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition hover:opacity-90"
+            style={{
+              color:
+                pathname === '/dashboard/settings'
+                  ? theme.portal_accent
+                  : theme.portal_text,
+            }}
+          >
+            <UserRound className="h-4 w-4" />
+            <span>Profile</span>
+          </Link>
 
-      <Link
-        href="/dashboard/settings/appearance"
-        onClick={closeMobile ? () => setMobileOpen(false) : undefined}
-        className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition hover:opacity-90"
-        style={{
-          color: pathname === '/dashboard/settings/appearance'
-            ? theme.portal_accent
-            : theme.portal_text,
-        }}
-      >
-        <Palette className="h-4 w-4" />
-        <span>Appearance</span>
-      </Link>
+          <Link
+            href="/dashboard/settings/appearance"
+            onClick={closeMobile ? () => setMobileOpen(false) : undefined}
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition hover:opacity-90"
+            style={{
+              color: pathname === '/dashboard/settings/appearance'
+                ? theme.portal_accent
+                : theme.portal_text,
+            }}
+          >
+            <Palette className="h-4 w-4" />
+            <span>Appearance</span>
+          </Link>
+        </>
+      )}
 
       <Link
         href="/dashboard/settings/printers"
@@ -850,7 +856,7 @@ export default function DashboardLayout({
               }}
             >
               <img
-                src="/thepartner-icon.png"
+                src="/partnerlogo-icon.png"
                 alt="Partner"
                 className="h-full w-full object-contain"
               />
@@ -1006,7 +1012,7 @@ export default function DashboardLayout({
 
           {/* SETTINGS */}
 
-          {permissions.can_manage_settings && (
+          {(permissions.can_manage_settings || restaurant) && (
             <div>
               <button
                 type="button"
@@ -1247,7 +1253,7 @@ export default function DashboardLayout({
             </div>
 
 
-            {permissions.can_manage_settings && (
+            {(permissions.can_manage_settings || restaurant) && (
               <div>
                 <button
                   type="button"

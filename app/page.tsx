@@ -47,7 +47,7 @@ export default function Home() {
               }}
             >
               <img
-                src="/thepartner-icon.png"
+                src="/partnerlogo-icon.png"
                 alt="Partner"
                 className="h-full w-full object-cover"
               />
@@ -502,7 +502,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full">
               <img
-                src="/thepartner-icon.png"
+                src="/partnerlogo-icon.png"
                 alt="NOVAMENU"
                 className="h-full w-full object-cover"
               />
