@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { restaurantDayKey } from '@/lib/restaurant-day';
+import { sumOrderAmounts } from '@/lib/order-financials';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
@@ -113,6 +114,7 @@ type DateGroup = {
   dateTimestamp: number;
   orders: Order[];
   totalRevenue: number;
+  pendingRevenue: number;
   statusCounts: Record<OrderStatus, number>;
 };
 
@@ -717,7 +719,8 @@ export default function OrdersPage() {
         ? `Yesterday • ${formattedDateString}`
         : formattedDateString;
 
-      const totalRevenue = groupOrders.reduce((sum, o) => sum + o.total, 0);
+      const totalRevenue = sumOrderAmounts(groupOrders, 'delivered');
+      const pendingRevenue = sumOrderAmounts(groupOrders, 'pending');
 
       const statusCounts: Record<OrderStatus, number> = {
         New: 0,
@@ -738,6 +741,7 @@ export default function OrdersPage() {
         dateTimestamp: firstOrderTimestamp,
         orders: groupOrders,
         totalRevenue,
+        pendingRevenue,
         statusCounts,
       });
     });
@@ -754,8 +758,9 @@ export default function OrdersPage() {
     const d = new Date(order.createdAtTimestamp);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
-  const totalRevenue = currentMonthOrders.reduce((sum, order) => sum + order.total, 0);
-  const allTimeRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const totalRevenue = sumOrderAmounts(currentMonthOrders, 'delivered');
+  const pendingMonthAmount = sumOrderAmounts(currentMonthOrders, 'pending');
+  const allTimeRevenue = sumOrderAmounts(orders, 'delivered');
   const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const allDateKeys = useMemo(() => groupedOrders.map((g) => g.dateKey), [groupedOrders]);
 
@@ -829,7 +834,13 @@ export default function OrdersPage() {
                 className="mt-0.5 text-[10px]"
                 style={{ color: 'var(--portal-text)', opacity: 0.55 }}
               >
-                All-time: {currency}{formatPrice(allTimeRevenue)}
+                Awaiting payment: {currency}{formatPrice(pendingMonthAmount)}
+              </p>
+              <p
+                className="mt-0.5 text-[10px]"
+                style={{ color: 'var(--portal-text)', opacity: 0.55 }}
+              >
+                All-time delivered: {currency}{formatPrice(allTimeRevenue)}
               </p>
             </div>
           </div>
@@ -1061,7 +1072,7 @@ export default function OrdersPage() {
                           )}
                         </div>
                         <p className="text-[11px] opacity-70">
-                          {group.orders.length} {group.orders.length === 1 ? 'order' : 'orders'} · Total Sales: {currency}{formatPrice(group.totalRevenue)}
+                          {group.orders.length} {group.orders.length === 1 ? 'order' : 'orders'} · Delivered: {currency}{formatPrice(group.totalRevenue)} · Awaiting payment: {currency}{formatPrice(group.pendingRevenue)}
                         </p>
                       </div>
                     </div>

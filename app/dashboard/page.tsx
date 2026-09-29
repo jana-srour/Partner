@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
+import { getOrderFinancialBucket, sumOrderAmounts } from '@/lib/order-financials';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
 import { PlanRequired } from '@/app/dashboard/components/plan-required';
 import {
@@ -80,6 +81,7 @@ type TrendPoint = {
   fullLabel: string;
   orders: number;
   revenue: number;
+  revenueOrders: number;
   pricing: number;
 };
 
@@ -110,11 +112,6 @@ function isActivePromotion(item: PromoItemRow, now = Date.now()) {
   if (end !== null && end < now) return false;
 
   return true;
-}
-
-function isCancelledOrder(order: OrderRow) {
-  const status = (order.status || '').toLowerCase();
-  return status === 'cancelled' || status === 'canceled';
 }
 
 function isScheduledPromotion(item: PromoItemRow, now = Date.now()) {
@@ -488,7 +485,7 @@ export default function DashboardPage() {
     // what actually keeps each new day/month/year starting clean from 0
     // instead of carrying stale or voided orders into the totals.
     const trackedOrders = (stats?.orders || []).filter(
-      (order) => !isCancelledOrder(order)
+      (order) => getOrderFinancialBucket(order.status) !== 'excluded'
     );
 
     if (chartView === 'monthly') {
@@ -513,7 +510,7 @@ export default function DashboardPage() {
             return ed.getFullYear() === year && ed.getMonth() === month;
           }) || [];
 
-        const revenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+        const revenue = sumOrderAmounts(orders, 'delivered');
 
         return {
           key,
@@ -522,6 +519,7 @@ export default function DashboardPage() {
           fullLabel: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
           orders: orders.length,
           revenue,
+          revenueOrders: orders.filter((order) => getOrderFinancialBucket(order.status) === 'delivered').length,
           pricing: pricing.length,
         };
       });
@@ -540,6 +538,7 @@ export default function DashboardPage() {
           fullLabel: String(currentYear),
           orders: 0,
           revenue: 0,
+          revenueOrders: 0,
           pricing: 0,
         }];
       }
@@ -553,7 +552,7 @@ export default function DashboardPage() {
           stats?.pricingHistory.filter(
             (e) => new Date(e.created_at).getFullYear() === year
           ) || [];
-        const revenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+        const revenue = sumOrderAmounts(orders, 'delivered');
         return {
           key: String(year),
           date: d,
@@ -561,6 +560,7 @@ export default function DashboardPage() {
           fullLabel: String(year),
           orders: orders.length,
           revenue,
+          revenueOrders: orders.filter((order) => getOrderFinancialBucket(order.status) === 'delivered').length,
           pricing: pricing.length,
         };
       });
@@ -612,10 +612,7 @@ export default function DashboardPage() {
           );
         }) || [];
 
-      const revenue = orders.reduce(
-        (sum, order) => sum + Number(order.total || 0),
-        0
-      );
+      const revenue = sumOrderAmounts(orders, 'delivered');
 
       return {
         key,
@@ -636,6 +633,7 @@ export default function DashboardPage() {
         }),
         orders: orders.length,
         revenue,
+        revenueOrders: orders.filter((order) => getOrderFinancialBucket(order.status) === 'delivered').length,
         pricing: pricing.length,
       };
     });
@@ -666,8 +664,12 @@ export default function DashboardPage() {
     const averageDailyRevenue = totalRevenue / periodLength;
     const averageDailyOrders = totalOrders / periodLength;
 
+    const revenueOrderCount = trend.reduce(
+      (sum, point) => sum + point.revenueOrders,
+      0
+    );
     const averageOrderValue =
-      totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      revenueOrderCount > 0 ? totalRevenue / revenueOrderCount : 0;
 
     const empty: TrendPoint = {
       key: '',
@@ -676,6 +678,7 @@ export default function DashboardPage() {
       fullLabel: '',
       orders: 0,
       revenue: 0,
+      revenueOrders: 0,
       pricing: 0,
     };
 
@@ -742,7 +745,7 @@ export default function DashboardPage() {
   }
 
   const trackedOrders = stats.orders.filter(
-    (order) => !isCancelledOrder(order)
+    (order) => getOrderFinancialBucket(order.status) !== 'excluded'
   );
 
   const currentRestaurantDay = getCurrentRestaurantDayBounds(
@@ -758,13 +761,14 @@ export default function DashboardPage() {
     }
   );
 
-  const todayRevenue = todayOrders.reduce(
-    (sum, order) => sum + Number(order.total || 0),
-    0
-  );
+  const todayRevenue = sumOrderAmounts(todayOrders, 'delivered');
+  const todayPendingAmount = sumOrderAmounts(todayOrders, 'pending');
+  const todayDeliveredCount = todayOrders.filter(
+    (order) => getOrderFinancialBucket(order.status) === 'delivered'
+  ).length;
 
-  const avgOrderValue = todayOrders.length
-    ? todayRevenue / todayOrders.length
+  const avgOrderValue = todayDeliveredCount
+    ? todayRevenue / todayDeliveredCount
     : 0;
 
   const newOrders = todayOrders.filter(
@@ -796,10 +800,8 @@ export default function DashboardPage() {
     (order) => new Date(order.created_at).getTime() >= weekAgo
   );
 
-  const weeklyRevenue = weeklyOrders.reduce(
-    (sum, order) => sum + Number(order.total || 0),
-    0
-  );
+  const weeklyRevenue = sumOrderAmounts(weeklyOrders, 'delivered');
+  const weeklyPendingAmount = sumOrderAmounts(weeklyOrders, 'pending');
 
   const weeklyAverage = weeklyOrders.length
     ? weeklyRevenue / weeklyOrders.length
@@ -999,12 +1001,18 @@ export default function DashboardPage() {
         )}
 
         {/* MAIN KPI CARDS */}
-        <section className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+        <section className="grid grid-cols-2 gap-4 xl:grid-cols-6">
           {[
             {
               label: 'Today revenue',
               value: formatCurrency(todayRevenue, stats.restaurant.currency),
-              detail: `${todayOrders.length} orders today`,
+              detail: `${todayDeliveredCount} delivered orders today`,
+              icon: DollarSign,
+            },
+            {
+              label: 'Awaiting payment',
+              value: formatCurrency(todayPendingAmount, stats.restaurant.currency),
+              detail: `${newOrders + preparing + ready} new, preparing or ready`,
               icon: DollarSign,
             },
             {
@@ -1016,7 +1024,7 @@ export default function DashboardPage() {
             {
               label: 'Avg order value',
               value: formatCurrency(avgOrderValue, stats.restaurant.currency),
-              detail: 'Average today',
+              detail: 'Delivered orders today',
               icon: BarChart3,
             },
             {
@@ -2191,6 +2199,9 @@ export default function DashboardPage() {
                     weeklyRevenue,
                     stats.restaurant.currency
                   )}
+                </p>
+                <p className="mt-1 text-[10px]" style={{ color: 'var(--portal-text-muted)' }}>
+                  Awaiting payment: {formatCurrency(weeklyPendingAmount, stats.restaurant.currency)}
                 </p>
               </div>
             </div>

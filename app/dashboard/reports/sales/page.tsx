@@ -23,6 +23,7 @@ import {
   type ReportsData,
 } from '@/lib/reports/data';
 import ReportDateRangePicker from '@/components/report-date-range-picker';
+import { getOrderFinancialBucket, isCancelledOrderStatus, sumOrderAmounts } from '@/lib/order-financials';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -50,21 +51,12 @@ const PERIODS: Period[] = [
   '12 months',
 ];
 
-const EXCLUDED_STATUSES = new Set([
-  'cancelled',
-  'canceled',
-  'rejected',
-  'declined',
-]);
-
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function isCompletedOrder(order: ReportOrder) {
-  return !EXCLUDED_STATUSES.has(
-    String(order.status || '').toLowerCase()
-  );
+  return getOrderFinancialBucket(order.status) === 'delivered';
 }
 
 function getPeriodDays(period: Period) {
@@ -204,13 +196,11 @@ function formatMonthLabel(date: Date) {
 function getRevenue(
   orders: ReportOrder[]
 ) {
-  return orders
-    .filter(isCompletedOrder)
-    .reduce(
-      (sum, order) =>
-        sum + Number(order.total || 0),
-      0
-    );
+  return sumOrderAmounts(orders, 'delivered');
+}
+
+function getPendingRevenue(orders: ReportOrder[]) {
+  return sumOrderAmounts(orders, 'pending');
 }
 
 function getPeriodLabel(
@@ -596,11 +586,7 @@ export default function SalesReportPage() {
   const cancelledOrders = useMemo(
     () =>
       data?.orders.filter((order) =>
-        EXCLUDED_STATUSES.has(
-          String(
-            order.status || ''
-          ).toLowerCase()
-        )
+        isCancelledOrderStatus(order.status)
       ) || [],
     [data]
   );
@@ -611,6 +597,11 @@ export default function SalesReportPage() {
         completedOrders
       ),
     [completedOrders]
+  );
+
+  const pendingRevenue = useMemo(
+    () => getPendingRevenue(data?.orders || []),
+    [data]
   );
 
   const totalOrders =
@@ -1127,7 +1118,7 @@ export default function SalesReportPage() {
         {/* KPI cards                                                          */}
         {/* ------------------------------------------------------------------ */}
 
-        <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {/* Revenue */}
           <div className="min-w-0 rounded-2xl border border-[var(--portal-border)] bg-[var(--portal-surface)] p-5">
             <div className="flex items-center justify-between">
@@ -1172,8 +1163,26 @@ export default function SalesReportPage() {
             </div>
 
             <div className="mt-1 text-[10px] text-[var(--portal-text-muted)]">
-              Completed / valid
-              orders
+              Delivered orders
+            </div>
+          </div>
+
+          {/* Pending value */}
+          <div className="min-w-0 rounded-2xl border border-[var(--portal-border)] bg-[var(--portal-surface)] p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--portal-accent-soft)] text-[var(--portal-accent)]">
+              <Clock3 className="h-4 w-4" />
+            </div>
+
+            <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--portal-text-muted)]">
+              Awaiting payment
+            </div>
+
+            <div className="mt-1 truncate text-2xl font-black tabular-nums">
+              {formatMoney(pendingRevenue, data.restaurant.currency)}
+            </div>
+
+            <div className="mt-1 text-[10px] text-[var(--portal-text-muted)]">
+              New, preparing and ready orders
             </div>
           </div>
 

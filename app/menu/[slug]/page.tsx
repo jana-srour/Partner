@@ -4880,14 +4880,7 @@ export default function PublicMenuPage() {
 
                       <button
                         type="button"
-                        onClick={() => {
-                          setOrderType('Restaurant');
-                          setTableNumber('');
-                          setCustomerAddress('');
-                          setCustomerName('');
-                          setCustomerPhone('');
-                          setShowOrderPopup(true);
-                        }}
+                        onClick={() => setShowOrderPopup(true)}
                         className="group flex items-center gap-3 px-5 py-3.5 rounded-full border backdrop-blur-xl shadow-2xl transition-all hover:-translate-y-1"
                         style={{
                           background:

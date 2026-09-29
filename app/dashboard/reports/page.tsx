@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { getOrderFinancialBucket, sumOrderAmounts } from '@/lib/order-financials';
 
 import {
   getReportPeriodRange,
@@ -128,21 +129,16 @@ export default function ReportsPage() {
   }, []);
 
   const overview = useMemo(() => {
-    const validOrder = (status: string | null | undefined) =>
-      !['cancelled', 'canceled', 'rejected', 'declined', 'voided'].includes(
-        String(status || '').trim().toLowerCase(),
-      );
     const summarize = (report: ReportsData | null) => {
       const orders = (report?.orders || []).filter((order) =>
-        validOrder(order.status),
+        getOrderFinancialBucket(order.status) === 'delivered',
       );
-      const revenue = orders.reduce(
-        (sum, order) => sum + Number(order.total || 0),
-        0,
-      );
+      const revenue = sumOrderAmounts(report?.orders || [], 'delivered');
+      const pendingRevenue = sumOrderAmounts(report?.orders || [], 'pending');
       return {
         orders: orders.length,
         revenue,
+        pendingRevenue,
         average: orders.length > 0 ? revenue / orders.length : 0,
       };
     };
@@ -176,17 +172,22 @@ export default function ReportsPage() {
     [
       'Revenue',
       loading ? 'Loading…' : formatMoney(overview.current.revenue),
-      'Valid orders in the last 30 days',
+      'Delivered orders in the last 30 days',
+    ],
+    [
+      'Awaiting payment',
+      loading ? 'Loading…' : formatMoney(overview.current.pendingRevenue),
+      'New, preparing and ready orders',
     ],
     [
       'Orders',
       loading ? 'Loading…' : overview.current.orders.toLocaleString(),
-      'Valid orders in the last 30 days',
+      'Delivered orders in the last 30 days',
     ],
     [
       'Average Order',
       loading ? 'Loading…' : formatMoney(overview.current.average),
-      'Average value per valid order',
+      'Average value per delivered order',
     ],
     [
       'Growth',
@@ -260,7 +261,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map(([label, value, description]) => (
           <div
             key={label}
