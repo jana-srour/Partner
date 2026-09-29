@@ -54,12 +54,16 @@ export async function POST(request: Request) {
 
   const { data: membership } = await admin
     .from('restaurant_members')
-    .select('role')
+    .select('role, branch_id')
     .eq('restaurant_id', body.restaurantId)
     .eq('user_id', user.id)
     .maybeSingle();
 
   if (!membership) return NextResponse.json({ error: 'You are not a member of this restaurant.' }, { status: 403 });
+
+  const isAllBranchOwner =
+    membership.role?.toLowerCase().trim() === 'owner' &&
+    membership.branch_id === null;
 
   const { data: restaurant } = await admin
     .from('restaurants')
@@ -73,12 +77,16 @@ export async function POST(request: Request) {
 
   const { data: order, error: orderError } = await admin
     .from('orders')
-    .select('id, total, delivery_fee')
+    .select('id, total, delivery_fee, branch_id')
     .eq('id', body.orderId)
     .eq('restaurant_id', body.restaurantId)
     .single();
 
   if (orderError || !order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+
+  if (!isAllBranchOwner && (!membership.branch_id || order.branch_id !== membership.branch_id)) {
+    return NextResponse.json({ error: 'This order belongs to another branch.' }, { status: 403 });
+  }
 
   const { error: deleteError } = await admin
     .from('order_items')

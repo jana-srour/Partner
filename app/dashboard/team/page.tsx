@@ -24,7 +24,16 @@ interface TeamMember {
   email: string;
   name: string;
   role: string;
+  branch_id: string | null;
+  branch_name: string | null;
   created_at: string;
+}
+
+interface TeamBranch {
+  id: string;
+  name: string;
+  is_active: boolean;
+  is_main: boolean;
 }
 
 interface TeamPosition {
@@ -57,6 +66,12 @@ export default function TeamPage() {
 
   const [members, setMembers] =
     useState<TeamMember[]>([]);
+
+  const [branches, setBranches] = useState<TeamBranch[]>([]);
+  const [newMemberBranchId, setNewMemberBranchId] = useState('');
+  const [editBranchId, setEditBranchId] = useState('');
+  const [memberBranchFilter, setMemberBranchFilter] = useState('all');
+  const [savingBranch, setSavingBranch] = useState(false);
 
   const [positions, setPositions] =
     useState<TeamPosition[]>([]);
@@ -217,6 +232,27 @@ export default function TeamPage() {
 
       setRestaurantId(result.restaurantId);
 
+      const { data: branchData, error: branchError } = await supabase
+        .from('restaurant_branches')
+        .select('id, name, is_active, is_main')
+        .eq('restaurant_id', result.restaurantId)
+        .order('is_main', { ascending: false })
+        .order('name', { ascending: true });
+
+      if (branchError) {
+        setMessage({ type: 'error', text: branchError.message });
+      } else {
+        const loadedBranches = branchData || [];
+        setBranches(loadedBranches);
+        setNewMemberBranchId((current) =>
+          loadedBranches.some((branch) => branch.id === current && branch.is_active)
+            ? current
+            : loadedBranches.find((branch) => branch.is_active && branch.is_main)?.id ||
+              loadedBranches.find((branch) => branch.is_active)?.id ||
+              ''
+        );
+      }
+
       const { data: subscription } = await supabase
         .from('restaurant_subscriptions')
         .select('plan_code, status, trial_ends_at')
@@ -307,7 +343,7 @@ export default function TeamPage() {
     const unsubscribe = subscribeRestaurantRealtime(supabase, {
       restaurantId,
       name: 'dashboard-team',
-      tables: ['restaurant_members', 'restaurant_roles'],
+      tables: ['restaurant_members', 'restaurant_roles', 'restaurant_branches'],
       onChange: refreshTeam,
       onStatus: (status) => {
         if (status === 'SUBSCRIBED') {
@@ -470,6 +506,7 @@ export default function TeamPage() {
             password,
             role,
             restaurantId,
+            branchId: newMemberBranchId,
           }),
         }
       );
@@ -625,6 +662,52 @@ export default function TeamPage() {
       });
     } finally {
       setSavingRole(false);
+    }
+  };
+
+  const handleUpdateBranch = async () => {
+    if (!managingMember || !restaurantId || !editBranchId) return;
+
+    setSavingBranch(true);
+    setMessage(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Your session has expired. Please log in again.');
+
+      const response = await fetch('/api/team/update-branch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          restaurantId,
+          memberUserId: managingMember.user_id,
+          branchId: editBranchId,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update branch assignment.');
+      }
+
+      const branchName = branches.find((branch) => branch.id === editBranchId)?.name || result.branchName;
+      setMembers((current) => current.map((member) =>
+        member.user_id === managingMember.user_id
+          ? { ...member, branch_id: editBranchId, branch_name: branchName }
+          : member
+      ));
+      setManagingMember((current) => current
+        ? { ...current, branch_id: editBranchId, branch_name: branchName }
+        : null
+      );
+      setMessage({ type: 'success', text: 'Team member branch updated successfully.' });
+    } catch (error: unknown) {
+      setMessage({ type: 'error', text: getErrorMessage(error, 'Failed to update branch assignment.') });
+    } finally {
+      setSavingBranch(false);
     }
   };
 
@@ -1505,6 +1588,10 @@ export default function TeamPage() {
         }
       }
 
+      if (memberBranchFilter !== 'all' && member.branch_id !== memberBranchFilter) {
+        return false;
+      }
+
       return true;
     })
     .sort((a, b) => {
@@ -1976,7 +2063,29 @@ export default function TeamPage() {
                       </select>
                     </div>
 
-                    {(memberSearch || memberPositionFilter !== 'all') && (
+                    <div
+                      className="flex items-center gap-2 rounded-lg border px-3"
+                      style={{
+                        borderColor: 'var(--portal-border)',
+                        background: 'var(--portal-surface)',
+                      }}
+                    >
+                      <select
+                        value={memberBranchFilter}
+                        onChange={(event) => setMemberBranchFilter(event.target.value)}
+                        className="h-9 bg-transparent text-xs outline-none"
+                        style={{ color: 'var(--portal-text)' }}
+                      >
+                        <option value="all">All branches</option>
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}{branch.is_active ? '' : ' (Inactive)'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {(memberSearch || memberPositionFilter !== 'all' || memberBranchFilter !== 'all') && (
                       <span
                         className="text-[10px] font-semibold whitespace-nowrap"
                         style={{
@@ -1991,7 +2100,7 @@ export default function TeamPage() {
 
                   {/* Table */}
                   <div className="overflow-x-auto">
-                    <table className="min-w-[720px] w-full text-left">
+                    <table className="min-w-[860px] w-full text-left">
                       <thead
                         style={{
                           background: 'var(--portal-background)',
@@ -2033,6 +2142,13 @@ export default function TeamPage() {
                             </span>
                           </th>
 
+                          <th
+                            className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em]"
+                            style={{ color: 'color-mix(in srgb, var(--portal-text) 55%, transparent)' }}
+                          >
+                            Branch
+                          </th>
+
                           {/* Added */}
                           <th
                             className="cursor-pointer px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em]"
@@ -2065,7 +2181,7 @@ export default function TeamPage() {
                         {filteredAndSortedMembers.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={4}
+                              colSpan={5}
                               className="px-6 py-12 text-center"
                             >
                               <p
@@ -2187,6 +2303,14 @@ export default function TeamPage() {
                                   </span>
                                 </td>
 
+                                <td className="px-4 py-4">
+                                  <span className="text-xs">
+                                    {member.role.toLowerCase().trim() === 'owner' && !member.branch_id
+                                      ? 'All branches'
+                                      : member.branch_name || 'Unassigned'}
+                                  </span>
+                                </td>
+
                                 {/* Added */}
                                 <td className="px-4 py-4">
                                   <span
@@ -2211,6 +2335,7 @@ export default function TeamPage() {
                                         setManagingMember(member);
                                         setEditName(member.name || '');
                                         setEditRole(member.role || '');
+                                        setEditBranchId(member.branch_id || '');
                                         setResetPassword('');
                                         setMessage(null);
                                       }}
@@ -2476,9 +2601,36 @@ export default function TeamPage() {
                       </select>
                     </div>
 
+                    <div>
+                      <label
+                        className="mb-2 block text-[10px] uppercase tracking-[0.14em] font-black"
+                        style={{ color: 'var(--portal-text)', opacity: 0.6 }}
+                      >
+                        Branch
+                      </label>
+                      <select
+                        value={newMemberBranchId}
+                        onChange={(event) => setNewMemberBranchId(event.target.value)}
+                        required
+                        disabled={!branches.some((branch) => branch.is_active)}
+                        className="w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:opacity-50"
+                        style={{
+                          background: 'var(--portal-background)',
+                          color: 'var(--portal-text)',
+                          borderColor: 'var(--portal-border)',
+                          ['--tw-ring-color' as string]: 'var(--portal-accent)',
+                        }}
+                      >
+                        <option value="">Select an active branch</option>
+                        {branches.filter((branch) => branch.is_active).map((branch) => (
+                          <option key={branch.id} value={branch.id}>{branch.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || !newMemberBranchId || !branches.some((branch) => branch.id === newMemberBranchId && branch.is_active)}
                       className="nova-primary w-full rounded-xl py-3.5 text-xs font-black disabled:opacity-50"
                       style={{
                         background: 'var(--portal-accent)',
@@ -2904,7 +3056,7 @@ export default function TeamPage() {
                         opacity: 0.5,
                       }}
                     >
-                      Update this team member's basic information.
+                      Update this team member&apos;s basic information.
                     </p>
                   </div>
 
@@ -3006,6 +3158,55 @@ export default function TeamPage() {
                       {savingRole ? 'Saving...' : 'Save Position'}
                     </button>
                   </div>
+                </section>
+
+                <section className="border-t pt-6" style={{ borderColor: 'var(--portal-border)' }}>
+                  <div className="mb-3">
+                    <p className="text-[10px] uppercase tracking-[0.14em] font-black" style={{ color: 'var(--portal-accent)' }}>
+                      Branch Assignment
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--portal-text)', opacity: 0.5 }}>
+                      Assign the member to an active branch in the restaurant.
+                    </p>
+                  </div>
+
+                  <select
+                    value={editBranchId}
+                    onChange={(event) => setEditBranchId(event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                    style={{
+                      background: 'var(--portal-background)',
+                      color: 'var(--portal-text)',
+                      borderColor: 'var(--portal-border)',
+                    }}
+                  >
+                    {editBranchId && !branches.some((branch) => branch.id === editBranchId && branch.is_active) && (
+                      <option value={editBranchId} disabled>
+                        {managingMember.branch_name || 'Inactive branch'} (Inactive)
+                      </option>
+                    )}
+                    {branches.filter((branch) => branch.is_active).map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleUpdateBranch}
+                    disabled={
+                      savingBranch ||
+                      !editBranchId ||
+                      !branches.some((branch) => branch.id === editBranchId && branch.is_active) ||
+                      editBranchId === managingMember.branch_id
+                    }
+                    className="nova-primary mt-3 w-full rounded-xl py-3 text-xs font-black disabled:opacity-50"
+                    style={{
+                      background: 'var(--portal-accent)',
+                      color: 'var(--portal-button-text, #FFFFFF)',
+                    }}
+                  >
+                    {savingBranch ? 'Saving...' : 'Save Branch'}
+                  </button>
                 </section>
 
                 {/* SECURITY */}

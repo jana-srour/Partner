@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { restaurantDayKey } from '@/lib/restaurant-day';
+import { UNASSIGNED_BRANCH_SCOPE_ID } from '@/lib/branch-scope';
 import { sumOrderAmounts } from '@/lib/order-financials';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
@@ -235,13 +236,26 @@ export default function OrdersPage() {
     setCollapsedDates(newState);
   };
 
-  const loadOrders = useCallback(async (id: string) => {
-    const { data, error: queryError } = await supabase
+  const loadOrders = useCallback(async (
+    id: string,
+    branchId: string | null,
+    role: string,
+  ) => {
+    let ordersQuery = supabase
       .from('orders')
       .select(
         'id, order_number, customer_name, customer_phone, table_number, customer_address, status, channel, total, delivery_fee, created_at, order_items(item_name, quantity, unit_price)'
       )
       .eq('restaurant_id', id);
+
+    if (!(role === 'owner' && branchId === null)) {
+      ordersQuery = ordersQuery.eq(
+        'branch_id',
+        branchId || UNASSIGNED_BRANCH_SCOPE_ID
+      );
+    }
+
+    const { data, error: queryError } = await ordersQuery;
 
     if (queryError) {
       console.error('Failed to load restaurant orders:', queryError);
@@ -289,7 +303,7 @@ export default function OrdersPage() {
 
       const { data: membership } = await supabase
         .from('restaurant_members')
-        .select('restaurant_id')
+        .select('restaurant_id, branch_id, role')
         .eq('user_id', auth.user.id)
         .limit(1)
         .maybeSingle();
@@ -367,7 +381,9 @@ export default function OrdersPage() {
       }
       setReceiptTemplate(loadedTemplate);
 
-      await loadOrders(id);
+      const branchId = membership.branch_id as string | null;
+      const memberRole = String(membership.role || '').toLowerCase().trim();
+      await loadOrders(id, branchId, memberRole);
       await loadEditableMenu(id);
       if (!active) return;
 
@@ -376,7 +392,7 @@ export default function OrdersPage() {
         name: 'dashboard-orders',
         tables: ['orders', 'order_items'],
         unfilteredTables: ['order_items'],
-        onChange: () => loadOrders(id),
+        onChange: () => loadOrders(id, branchId, memberRole),
       });
 
       if (!active) {

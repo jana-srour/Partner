@@ -21,6 +21,7 @@ export type RestaurantRealtimeTable =
   | 'orders'
   | 'order_items'
   | 'restaurant_members'
+  | 'restaurant_branches'
   | 'restaurant_subscriptions'
   | 'restaurant_roles'
   | 'restaurant_qr_designs'

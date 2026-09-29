@@ -603,10 +603,10 @@ export default function DashboardLayout({
 
     {
       name: 'Branch Management',
-      href: '#',
+      href: '/dashboard/branches',
       icon: GitBranch,
-      type: 'coming-soon' as const,
-      locked: true,
+      type: 'link' as const,
+      locked: !subscriptionAllowsPath('/dashboard/branches'),
     },
 
     {

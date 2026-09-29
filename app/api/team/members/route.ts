@@ -149,6 +149,7 @@ export async function GET(req: Request) {
           user_id,
           role,
           position_id,
+          branch_id,
           created_at
           `
         )
@@ -177,6 +178,22 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
+
+    const { data: branches, error: branchesError } = await supabaseAdmin
+      .from('restaurant_branches')
+      .select('id, name, is_active')
+      .eq('restaurant_id', restaurantId);
+
+    if (branchesError) {
+      return NextResponse.json(
+        { error: branchesError.message },
+        { status: 500 }
+      );
+    }
+
+    const branchesById = new Map(
+      (branches || []).map((branch) => [branch.id, branch])
+    );
 
     // =========================================================
     // GET AUTH USERS
@@ -322,6 +339,19 @@ export async function GET(req: Request) {
             role:
               positionName,
 
+            branch_id:
+              membership.branch_id,
+
+            branch_name:
+              membership.branch_id
+                ? branchesById.get(membership.branch_id)?.name || null
+                : null,
+
+            branch_is_active:
+              membership.branch_id
+                ? branchesById.get(membership.branch_id)?.is_active ?? false
+                : null,
+
             created_at:
               membership.created_at,
           };
@@ -338,7 +368,7 @@ export async function GET(req: Request) {
       members,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
 
     console.error(
       'GET TEAM MEMBERS ERROR:',
@@ -348,8 +378,9 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         error:
-          error?.message ||
-          'Internal server error.',
+          error instanceof Error
+            ? error.message
+            : 'Internal server error.',
       },
       { status: 500 }
     );

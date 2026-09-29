@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
+import { isAllBranchOwner, UNASSIGNED_BRANCH_SCOPE_ID } from '@/lib/branch-scope';
 import { getOrderFinancialBucket, sumOrderAmounts } from '@/lib/order-financials';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
 import { PlanRequired } from '@/app/dashboard/components/plan-required';
@@ -180,7 +181,7 @@ export default function DashboardPage() {
 
       const { data: membership } = await supabase
         .from('restaurant_members')
-        .select('restaurant_id')
+        .select('restaurant_id, branch_id, role')
         .eq('user_id', auth.user.id)
         .limit(1)
         .maybeSingle();
@@ -215,6 +216,24 @@ export default function DashboardPage() {
       }
 
       const loadStats = async () => {
+        let branchOrdersQuery = supabase
+          .from('orders')
+          .select('total, status, created_at')
+          .eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false });
+
+        const branchScope = {
+          restaurantId,
+          branchId: membership.branch_id,
+          role: String(membership.role || '').toLowerCase().trim(),
+        };
+        if (!isAllBranchOwner(branchScope)) {
+          branchOrdersQuery = branchOrdersQuery.eq(
+            'branch_id',
+            membership.branch_id || UNASSIGNED_BRANCH_SCOPE_ID
+          );
+        }
+
         const { data: sessionData } = await supabase.auth.getSession();
         const teamResponse = sessionData.session
           ? await fetch('/api/team/members', {
@@ -266,11 +285,7 @@ export default function DashboardPage() {
             )
             .eq('restaurant_id', restaurantId),
 
-          supabase
-            .from('orders')
-            .select('total, status, created_at')
-            .eq('restaurant_id', restaurantId)
-            .order('created_at', { ascending: false }),
+          branchOrdersQuery,
 
           supabase
             .from('restaurant_price_adjustment_history')

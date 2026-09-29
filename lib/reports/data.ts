@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getCurrentRestaurantBranchScope, isAllBranchOwner, UNASSIGNED_BRANCH_SCOPE_ID } from '@/lib/branch-scope';
 import {
   getCurrentRestaurantDayBounds,
   normalizeRestaurantDayStart,
@@ -51,6 +52,7 @@ export type ReportOrder = {
   channel?: string | null;
   total: number | null;
   status: string;
+  branch_id?: string | null;
   created_at: string;
 };
 
@@ -146,33 +148,8 @@ export function getReportPeriodRange(
 }
 
 export async function getCurrentRestaurantId(): Promise<string | null> {
-  const { data: auth, error: authError } =
-    await supabase.auth.getUser();
-
-  if (authError || !auth.user) {
-    return null;
-  }
-
-  const {
-    data: membership,
-    error: membershipError,
-  } = await supabase
-    .from('restaurant_members')
-    .select('restaurant_id')
-    .eq('user_id', auth.user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (membershipError) {
-    console.error(
-      'Reports membership lookup failed:',
-      membershipError
-    );
-
-    return null;
-  }
-
-  return membership?.restaurant_id ?? null;
+  const scope = await getCurrentRestaurantBranchScope();
+  return scope?.restaurantId ?? null;
 }
 
 function applyDateRange<
@@ -213,11 +190,36 @@ function applyDateRange<
 export async function getReportsData(
   range?: ReportDateRange
 ): Promise<ReportsData | null> {
-  const restaurantId =
-    await getCurrentRestaurantId();
+  const scope = await getCurrentRestaurantBranchScope();
+  const restaurantId = scope?.restaurantId;
 
   if (!restaurantId) {
     return null;
+  }
+
+  let ordersQuery = supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      customer_name,
+      customer_phone,
+      customer_address,
+      table_number,
+      channel,
+      total,
+      status,
+      branch_id,
+      created_at
+    `)
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+
+  if (scope && !isAllBranchOwner(scope)) {
+    ordersQuery = ordersQuery.eq(
+      'branch_id',
+      scope.branchId || UNASSIGNED_BRANCH_SCOPE_ID
+    );
   }
 
   /*
@@ -286,30 +288,7 @@ export async function getReportsData(
         ascending: false,
       }),
 
-    applyDateRange(
-      supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          customer_name,
-          customer_phone,
-          customer_address,
-          table_number,
-          channel,
-          total,
-          status,
-          created_at
-        `)
-        .eq(
-          'restaurant_id',
-          restaurantId
-        )
-        .order('created_at', {
-          ascending: false,
-        }),
-      range
-    ),
+    applyDateRange(ordersQuery, range),
 
     supabase
       .from('discounts')

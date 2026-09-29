@@ -31,12 +31,28 @@ export async function POST(request: Request) {
   });
   const { data: membership } = await admin
     .from('restaurant_members')
-    .select('role')
+    .select('role, branch_id')
     .eq('restaurant_id', body.restaurantId)
     .eq('user_id', user.id)
     .maybeSingle();
 
   if (!membership) return NextResponse.json({ error: 'You are not a member of this restaurant.' }, { status: 403 });
+
+  const { data: order } = await admin
+    .from('orders')
+    .select('id, branch_id')
+    .eq('id', body.orderId)
+    .eq('restaurant_id', body.restaurantId)
+    .maybeSingle();
+
+  if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+
+  const isAllBranchOwner =
+    membership.role?.toLowerCase().trim() === 'owner' &&
+    membership.branch_id === null;
+  if (!isAllBranchOwner && (!membership.branch_id || order.branch_id !== membership.branch_id)) {
+    return NextResponse.json({ error: 'This order belongs to another branch.' }, { status: 403 });
+  }
 
   const { data: restaurant } = await admin
     .from('restaurants')
@@ -53,6 +69,7 @@ export async function POST(request: Request) {
     .update({ status: 'Cancelled', cancelled_at: new Date().toISOString(), cancelled_by: user.id, updated_at: new Date().toISOString() })
     .eq('id', body.orderId)
     .eq('restaurant_id', body.restaurantId)
+    .eq('branch_id', order.branch_id)
     .neq('status', 'Cancelled');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

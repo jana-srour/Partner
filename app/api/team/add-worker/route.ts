@@ -86,6 +86,11 @@ export async function POST(req: Request) {
         ? body.restaurantId.trim()
         : '';
 
+    const branchId =
+      typeof body?.branchId === 'string'
+        ? body.branchId.trim()
+        : '';
+
     // =========================================================
     // VALIDATION
     // =========================================================
@@ -95,7 +100,8 @@ export async function POST(req: Request) {
       !email ||
       !password ||
       !role ||
-      !restaurantId
+      !restaurantId ||
+      !branchId
     ) {
       return NextResponse.json(
         {
@@ -106,6 +112,7 @@ export async function POST(req: Request) {
             password: !!password,
             role: !!role,
             restaurantId: !!restaurantId,
+            branchId: !!branchId,
           },
         },
         { status: 400 }
@@ -161,9 +168,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const requesterRole =
-      requester.role?.toLowerCase().trim();
-
     if (!await canManageTeam(supabaseAdmin, user.id, restaurantId)) {
       return NextResponse.json(
         {
@@ -171,6 +175,21 @@ export async function POST(req: Request) {
             'You do not have permission to add team members.',
         },
         { status: 403 }
+      );
+    }
+
+    const { data: branch, error: branchError } = await supabaseAdmin
+      .from('restaurant_branches')
+      .select('id')
+      .eq('id', branchId)
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (branchError || !branch) {
+      return NextResponse.json(
+        { error: 'Select an active branch belonging to this restaurant.' },
+        { status: 400 }
       );
     }
 
@@ -285,6 +304,7 @@ export async function POST(req: Request) {
       .from('restaurant_members')
       .insert({
         restaurant_id: restaurantId,
+        branch_id: branch.id,
         user_id: newUserId,
         role: 'staff',
       });
@@ -358,7 +378,7 @@ export async function POST(req: Request) {
       positionId: position.id,
       positionName: position.name,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(
       'ADD WORKER ERROR:',
       error
@@ -367,8 +387,9 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          error?.message ||
-          'Internal server error.',
+          error instanceof Error
+            ? error.message
+            : 'Internal server error.',
       },
       { status: 500 }
     );

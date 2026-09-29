@@ -25,8 +25,8 @@ import {
 } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { getCurrentRestaurantBranchScope, isAllBranchOwner, UNASSIGNED_BRANCH_SCOPE_ID } from '@/lib/branch-scope';
 import {
-  getCurrentRestaurantId,
   getReportPeriodRange,
 } from '@/lib/reports/data';
 import ReportDateRangePicker from '@/components/report-date-range-picker';
@@ -517,12 +517,27 @@ export default function CustomersReportPage() {
 
           setError('');
 
-          const restaurantId =
-            await getCurrentRestaurantId();
+          const scope = await getCurrentRestaurantBranchScope();
+          const restaurantId = scope?.restaurantId;
 
           if (!restaurantId) {
             throw new Error(
               'No restaurant is associated with the current account.',
+            );
+          }
+
+          let ordersQuery = supabase
+            .from('orders')
+            .select(
+              'id, order_number, customer_name, customer_phone, customer_address, status, total, created_at',
+            )
+            .eq('restaurant_id', restaurantId)
+            .order('created_at', { ascending: true });
+
+          if (scope && !isAllBranchOwner(scope)) {
+            ordersQuery = ordersQuery.eq(
+              'branch_id',
+              scope.branchId || UNASSIGNED_BRANCH_SCOPE_ID
             );
           }
 
@@ -549,21 +564,7 @@ export default function CustomersReportPage() {
              * is genuinely new or whether they ordered before the
              * selected reporting period.
              */
-            supabase
-              .from('orders')
-              .select(
-                'id, order_number, customer_name, customer_phone, customer_address, status, total, created_at',
-              )
-              .eq(
-                'restaurant_id',
-                restaurantId,
-              )
-              .order(
-                'created_at',
-                {
-                  ascending: true,
-                },
-              ),
+            ordersQuery,
           ]);
 
           if (
@@ -637,8 +638,8 @@ export default function CustomersReportPage() {
     let cancelled = false;
 
     async function setupRealtime() {
-      const restaurantId =
-        await getCurrentRestaurantId();
+      const scope = await getCurrentRestaurantBranchScope();
+      const restaurantId = scope?.restaurantId;
 
       if (
         !restaurantId ||
