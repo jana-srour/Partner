@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Terms of Service | The Partner",
-  description: "Terms of Service for The Partner.",
+  title: "Terms of Service | Partner",
+  description: "Terms of Service for Partner.",
 };
 
 export default function TermsOfServicePage() {
@@ -14,7 +14,7 @@ export default function TermsOfServicePage() {
             href="/"
             className="inline-flex items-center text-sm font-semibold tracking-wide text-[#B08D57] transition-opacity hover:opacity-70"
           >
-            The Partner
+            Partner
           </Link>
 
           <h1 className="mt-8 text-4xl font-black tracking-tight sm:text-5xl">
@@ -29,11 +29,11 @@ export default function TermsOfServicePage() {
         <div className="space-y-10 text-[15px] leading-7 text-[#171613]/75">
           <section>
             <h2 className="mb-3 text-xl font-bold text-[#171613]">
-              1. About The Partner
+              1. About Partner
             </h2>
             <p>
-              The Partner is a restaurant technology platform operated by Novera
-              Labs. The Partner provides digital menu, restaurant management,
+              Partner is a restaurant technology platform operated by Novera
+              Labs. Partner provides digital menu, restaurant management,
               ordering, QR code, and related tools that allow restaurants to
               create and manage digital experiences for their customers.
             </p>
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
               2. Acceptance of These Terms
             </h2>
             <p>
-              By creating an account, accessing, or using The Partner, you agree
+              By creating an account, accessing, or using Partner, you agree
               to these Terms of Service. If you do not agree with these terms,
               you should not use the service.
             </p>
@@ -230,7 +230,7 @@ export default function TermsOfServicePage() {
             href="/"
             className="font-semibold text-[#171613]/55 hover:text-[#171613]"
           >
-              Back to The Partner
+              Back to Partner
           </Link>
         </div>
       </div>

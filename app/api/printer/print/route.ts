@@ -78,7 +78,7 @@ export async function POST(request: Request) {
   }
 
   receiptLines.push(boldOn, doubleSize);
-  receiptLines.push(line(template?.storeName || 'The Partner'));
+  receiptLines.push(line(template?.storeName || 'Partner'));
   receiptLines.push(boldOff, normalSize);
 
   if (template?.tagline) {

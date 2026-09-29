@@ -205,7 +205,7 @@ export default function ForgotPasswordPage() {
 
             <img
               src="/thepartner-icon.png"
-              alt="The Partner"
+              alt="Partner"
               className="h-full w-full object-contain"
             />
 
@@ -214,7 +214,7 @@ export default function ForgotPasswordPage() {
           <div className="text-left">
 
             <div className="text-sm font-black tracking-[0.22em] text-white">
-              The Partner
+              Partner
             </div>
 
             <div className="text-[8px] tracking-[0.22em] text-white/35 font-semibold">
@@ -367,7 +367,7 @@ export default function ForgotPasswordPage() {
 
                   <img
                     src="/thepartner-icon.png"
-                    alt="The Partner"
+                    alt="Partner"
                     className="h-full w-full object-contain"
                   />
 

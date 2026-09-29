@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Refund Policy | The Partner",
-  description: "Refund Policy for The Partner.",
+  title: "Refund Policy | Partner",
+  description: "Refund Policy for Partner.",
 };
 
 export default function RefundPolicyPage() {
@@ -14,7 +14,7 @@ export default function RefundPolicyPage() {
             href="/"
             className="inline-flex items-center text-sm font-semibold tracking-wide text-[#B08D57] transition-opacity hover:opacity-70"
           >
-            The Partner
+            Partner
           </Link>
 
           <h1 className="mt-8 text-4xl font-black tracking-tight sm:text-5xl">
@@ -33,8 +33,8 @@ export default function RefundPolicyPage() {
             </h2>
             <p>
               This Refund Policy explains how refunds are handled for paid
-              The Partner subscriptions and services provided by Novera Labs.
-              By purchasing a The Partner subscription, you acknowledge and agree
+              Partner subscriptions and services provided by Novera Labs.
+              By purchasing a Partner subscription, you acknowledge and agree
               to this policy.
             </p>
           </section>
@@ -44,7 +44,7 @@ export default function RefundPolicyPage() {
               2. Free Trial
             </h2>
             <p>
-              The Partner may provide eligible customers with a free trial before
+              Partner may provide eligible customers with a free trial before
               a paid subscription begins. No refund is applicable to a free
               trial because no subscription charge is made during the trial
               period.
@@ -216,7 +216,7 @@ export default function RefundPolicyPage() {
             href="/"
             className="font-semibold text-[#171613]/55 hover:text-[#171613]"
           >
-              Back to The Partner
+              Back to Partner
           </Link>
         </div>
       </div>

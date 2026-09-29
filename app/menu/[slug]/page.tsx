@@ -1564,7 +1564,7 @@ export default function PublicMenuPage() {
                 theme.public_text,
             }}
           >
-              The Partner
+              Partner
           </p>
 
           <div className="mt-5 flex items-center justify-center gap-2">
@@ -2084,7 +2084,7 @@ export default function PublicMenuPage() {
               >
                 <img
                   src="/thepartner-icon.png"
-                  alt="The Partner"
+                  alt="Partner"
                   className="h-full w-full object-cover"
                 />
 
@@ -2110,7 +2110,7 @@ export default function PublicMenuPage() {
                     `,
                   }}
                 >
-                  The Partner
+                  Partner
                 </p>
 
                 <p
@@ -5021,7 +5021,7 @@ export default function PublicMenuPage() {
                     >
                       <img
                         src="/thepartner-icon.png"
-                        alt="The Partner"
+                        alt="Partner"
                         className="h-full w-full object-cover"
                       />
 
@@ -5040,7 +5040,7 @@ export default function PublicMenuPage() {
                         `0 0 20px ${theme.public_accent}18`,
                     }}
                   >
-                    The Partner
+                    Partner
                   </p>
 
 

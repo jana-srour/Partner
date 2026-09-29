@@ -2788,13 +2788,13 @@ export default function MenuManagementPage() {
             <div className="w-5 h-5 overflow-hidden rounded-md">
               <img
                 src="/thepartner-icon.png"
-                alt="The Partner"
+                alt="Partner"
                 className="h-full w-full object-cover"
               />
             </div>
 
             <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
-              The Partner
+              Partner
             </span>
 
           </div>

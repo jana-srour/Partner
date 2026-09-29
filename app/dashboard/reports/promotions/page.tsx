@@ -1532,7 +1532,7 @@ export default function PromotionsReportPage() {
                       calculated.bestPromotion.revenue,
                       currency,
                     )} in attributed revenue during the selected period. Use the promotion breakdown to compare its usage and discount cost against your other offers.`
-                  : 'A promotion should not only be measured by how many times it was used. The Partner compares promotion usage, discount cost and resulting revenue to help identify which offers are actually valuable.'}
+                  : 'A promotion should not only be measured by how many times it was used. Partner compares promotion usage, discount cost and resulting revenue to help identify which offers are actually valuable.'}
               </p>
             </div>
           </div>

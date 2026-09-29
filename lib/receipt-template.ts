@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export type PaperWidth = '58mm' | '80mm';
 export type FontSize = 'xxs' | 'xs' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | 'xxl';
 export type FontFamily =
@@ -89,7 +91,7 @@ export type ReceiptTemplateConfig = {
 };
 
 export const defaultReceiptTemplate: ReceiptTemplateConfig = {
-  storeName: 'The Partner',
+  storeName: 'Partner',
   tagline: 'Artisan Food & Drinks',
   address: '100 Gourmet Plaza, Downtown',
   phone: '+1 (555) 019-2834',
@@ -132,7 +134,7 @@ export const defaultReceiptTemplate: ReceiptTemplateConfig = {
   paymentMethod: 'Credit Card / Cash',
   showItemCount: true,
 
-  footerMessage: 'Thank you for choosing The Partner!\nPlease visit us again soon.',
+  footerMessage: 'Thank you for choosing Partner!\nPlease visit us again soon.',
   showFooterMessage: true,
   wifiInfo: 'Guest Wi-Fi: NovaGuest  Pass: welcome123',
   showWifiInfo: true,
@@ -358,6 +360,65 @@ export function loadReceiptTemplate(): ReceiptTemplateConfig {
 export function saveReceiptTemplate(config: ReceiptTemplateConfig): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(config));
+}
+
+export async function loadRestaurantReceiptTemplate(
+  supabase: SupabaseClient,
+  restaurantId: string
+): Promise<ReceiptTemplateConfig | null> {
+  const { data, error } = await supabase
+    .from('restaurant_qr_designs')
+    .select('design')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const template = (data?.design as Record<string, unknown> | null)
+    ?.printerTemplate;
+
+  if (!template || typeof template !== 'object' || Array.isArray(template)) {
+    return null;
+  }
+
+  const parsed = template as Partial<ReceiptTemplateConfig>;
+  return {
+    ...defaultReceiptTemplate,
+    ...parsed,
+    headerStarsText:
+      parsed.headerStarsText ?? defaultReceiptTemplate.headerStarsText,
+  };
+}
+
+export async function saveRestaurantReceiptTemplate(
+  supabase: SupabaseClient,
+  restaurantId: string,
+  config: ReceiptTemplateConfig
+): Promise<void> {
+  const { data, error: loadError } = await supabase
+    .from('restaurant_qr_designs')
+    .select('design')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+
+  if (loadError) throw loadError;
+
+  const existingDesign =
+    data?.design && typeof data.design === 'object' && !Array.isArray(data.design)
+      ? data.design as Record<string, unknown>
+      : {};
+  const { error } = await supabase
+    .from('restaurant_qr_designs')
+    .upsert(
+      {
+        restaurant_id: restaurantId,
+        design: { ...existingDesign, printerTemplate: config },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'restaurant_id' }
+    );
+
+  if (error) throw error;
 }
 
 export function getDividerString(style: DividerStyle, width: number = 32): string {

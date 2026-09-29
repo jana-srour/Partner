@@ -320,7 +320,7 @@ export function printOrderReceipt({
           }
 
           <div class="store-title">
-            ${template.storeName || 'The Partner'}
+            ${template.storeName || 'Partner'}
           </div>
 
           ${
@@ -881,7 +881,7 @@ export function ReceiptPreview({
             ))}
 
           <h2 className="text-[17px] font-black uppercase tracking-tight">
-            {template.storeName || 'The Partner'}
+            {template.storeName || 'Partner'}
           </h2>
 
           {template.tagline && (

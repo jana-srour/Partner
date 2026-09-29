@@ -29,6 +29,7 @@ import {
   ReceiptTemplateConfig,
   defaultReceiptTemplate,
   loadReceiptTemplate,
+  loadRestaurantReceiptTemplate,
 } from '@/lib/receipt-template';
 import {
   ReceiptPreview,
@@ -355,7 +356,13 @@ export default function OrdersPage() {
         setConfiguredPrinter(defaultPrinter);
       }
 
-      const loadedTemplate = loadReceiptTemplate();
+      let loadedTemplate = loadReceiptTemplate();
+      try {
+        loadedTemplate =
+          (await loadRestaurantReceiptTemplate(supabase, id)) || loadedTemplate;
+      } catch {
+        // Keep the locally saved template if shared settings are unavailable.
+      }
       setReceiptTemplate(loadedTemplate);
 
       await loadOrders(id);
@@ -545,13 +552,22 @@ export default function OrdersPage() {
     setError('');
   };
 
-  const requestPrintOrder = (order: Order) => {
+  const requestPrintOrder = async (order: Order) => {
     setPrintMessage('');
     const stored = window.localStorage.getItem(PRINTER_STORAGE_KEY);
     setConfiguredPrinter(
       stored ? ({ ...defaultPrinter, ...JSON.parse(stored) } as SavedPrinter) : defaultPrinter
     );
-    setReceiptTemplate(loadReceiptTemplate());
+    let loadedTemplate = loadReceiptTemplate();
+    if (restaurantId) {
+      try {
+        loadedTemplate =
+          (await loadRestaurantReceiptTemplate(supabase, restaurantId)) || loadedTemplate;
+      } catch {
+        // Keep the locally saved template if shared settings are unavailable.
+      }
+    }
+    setReceiptTemplate(loadedTemplate);
     setPrintOrder(order);
   };
 

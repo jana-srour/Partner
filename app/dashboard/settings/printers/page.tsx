@@ -29,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { notifyRestaurantRealtimeSync } from '@/lib/live-sync';
 import { DashboardLoader } from '@/app/dashboard/components/dashboard-loader';
 import { PlanRequired } from '@/app/dashboard/components/plan-required';
 import {
@@ -68,8 +69,10 @@ import {
   fontFamilyOptions,
   fontSizeOptions,
   loadReceiptTemplate,
+  loadRestaurantReceiptTemplate,
   receiptPresets,
   saveReceiptTemplate,
+  saveRestaurantReceiptTemplate,
   starEmblemPresets,
 } from '@/lib/receipt-template';
 import {
@@ -146,6 +149,7 @@ export default function PrintersSettingsPage() {
     useState<'dinein' | 'delivery'>('dinein');
   const [activePreset, setActivePreset] = useState<string>('classic');
   const [savedTemplateAlert, setSavedTemplateAlert] = useState(false);
+  const [templateReady, setTemplateReady] = useState(false);
 
   // Custom subnet scanner input
   const [customSubnet, setCustomSubnet] = useState('');
@@ -260,8 +264,20 @@ export default function PrintersSettingsPage() {
       }
 
       // Load saved receipt template
-      const savedTemplate = loadReceiptTemplate();
+      let savedTemplate = loadReceiptTemplate();
+      if (membership?.restaurant_id) {
+        try {
+          savedTemplate =
+            (await loadRestaurantReceiptTemplate(supabase, membership.restaurant_id)) ||
+            savedTemplate;
+        } catch {
+          setMessage('Could not load the shared printer template. Using this device\'s saved copy.');
+          setMessageType('error');
+        }
+      }
       setTemplate(savedTemplate);
+      saveReceiptTemplate(savedTemplate);
+      setTemplateReady(true);
 
       // Automatically load pre-paired devices into detected list
       const paired = await getPairedDevices();
@@ -272,6 +288,26 @@ export default function PrintersSettingsPage() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (!templateReady || !restaurantId) return;
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        await saveRestaurantReceiptTemplate(supabase, restaurantId, template);
+        notifyRestaurantRealtimeSync(supabase, restaurantId, 'printer-template');
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? `Could not save the shared printer template: ${error.message}`
+            : 'Could not save the shared printer template.'
+        );
+        setMessageType('error');
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [restaurantId, template, templateReady]);
 
   const updatePrinterField = <K extends keyof SavedPrinter>(
     field: K,
@@ -395,8 +431,23 @@ export default function PrintersSettingsPage() {
     setMessageType('info');
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     saveReceiptTemplate(template);
+
+    if (restaurantId) {
+      try {
+        await saveRestaurantReceiptTemplate(supabase, restaurantId, template);
+        notifyRestaurantRealtimeSync(supabase, restaurantId, 'printer-template');
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? `Could not save the shared printer template: ${error.message}`
+            : 'Could not save the shared printer template.'
+        );
+        setMessageType('error');
+        return;
+      }
+    }
 
     setSavedTemplateAlert(true);
 

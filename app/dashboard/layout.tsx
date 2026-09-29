@@ -798,7 +798,7 @@ export default function DashboardLayout({
     color: theme.portal_text,
   }}
 >
-  The Partner
+  Partner
 </div>
 <div
   className="text-[8px] font-semibold tracking-[0.16em]"
@@ -828,7 +828,7 @@ export default function DashboardLayout({
 
       {/* DESKTOP SIDEBAR */}
 
-      <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[270px] border-r lg:flex lg:flex-col" style={{ borderColor: theme.portal_border, background: theme.portal_surface }}>
+      <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[270px] overflow-hidden border-r lg:flex lg:flex-col" style={{ borderColor: theme.portal_border, background: theme.portal_surface }}>
 
         {/* BRAND */}
 
@@ -851,7 +851,7 @@ export default function DashboardLayout({
             >
               <img
                 src="/thepartner-icon.png"
-                alt="The Partner"
+                alt="Partner"
                 className="h-full w-full object-contain"
               />
             </div>
@@ -861,7 +861,7 @@ export default function DashboardLayout({
                 className="text-sm font-black tracking-[0.18em]"
                 style={{ color: theme.portal_text }}
               >
-                The Partner
+                Partner
               </div>
 
               <div
@@ -988,7 +988,7 @@ export default function DashboardLayout({
 
         {/* NAVIGATION */}
 
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6">
 
           <div className="mb-3 px-3 text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--portal-text)' }}>
             Workspace
@@ -1053,7 +1053,7 @@ export default function DashboardLayout({
               <Info className="h-4 w-4" />
             </span>
 
-            <span>About The Partner</span>
+            <span>About Partner</span>
           </Link>
 
           {/* PUBLIC MENU */}
@@ -1127,7 +1127,7 @@ export default function DashboardLayout({
             className="absolute inset-0 bg-[#151923]/30 backdrop-blur-sm"
           />
 
-          <aside className="absolute bottom-0 left-0 top-[70px] w-[280px] overflow-y-auto border-r p-4 shadow-2xl" style={{ borderColor: theme.portal_border, background: theme.portal_surface }}>
+          <aside className="absolute bottom-0 left-0 top-[70px] max-h-[calc(100dvh-70px)] w-[min(280px,88vw)] overflow-y-auto overscroll-contain border-r p-4 shadow-2xl" style={{ borderColor: theme.portal_border, background: theme.portal_surface }}>
 
             <div className="mb-5">
               <div
@@ -1294,7 +1294,7 @@ export default function DashboardLayout({
                 <Info className="h-4 w-4" />
               </span>
 
-              About The Partner
+              About Partner
             </Link>
 
 

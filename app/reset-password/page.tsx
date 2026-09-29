@@ -266,7 +266,7 @@ export default function ResetPasswordPage() {
           >
             <img
               src="/thepartner-icon.png"
-              alt="The Partner"
+              alt="Partner"
               className="h-full w-full object-contain"
             />
           </div>
@@ -274,7 +274,7 @@ export default function ResetPasswordPage() {
           <div className="text-left">
 
             <div className="text-sm font-black tracking-[0.22em] text-white">
-              The Partner
+              Partner
             </div>
 
             <div className="text-[8px] tracking-[0.22em] text-white/35 font-semibold">
@@ -427,7 +427,7 @@ export default function ResetPasswordPage() {
 
                   <img
                     src="/thepartner-icon.png"
-                    alt="The Partner"
+                    alt="Partner"
                     className="h-full w-full object-contain"
                   />
 
@@ -440,7 +440,7 @@ export default function ResetPasswordPage() {
               </h1>
 
               <p className="mt-2.5 text-xs leading-5 text-white/35">
-                Choose a strong new password for your The Partner restaurant
+                Choose a strong new password for your Partner restaurant
                 workspace.
               </p>
 

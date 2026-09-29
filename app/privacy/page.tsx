@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy | The Partner",
-  description: "Privacy Policy for The Partner.",
+  title: "Privacy Policy | Partner",
+  description: "Privacy Policy for Partner.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
             href="/"
             className="inline-flex items-center text-sm font-semibold tracking-wide text-[#B08D57] transition-opacity hover:opacity-70"
           >
-            The Partner
+            Partner
           </Link>
 
           <h1 className="mt-8 text-4xl font-black tracking-tight sm:text-5xl">
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               This Privacy Policy explains how Novera Labs collects, uses,
-              stores, and protects information when you use The Partner and its
+              stores, and protects information when you use Partner and its
               related services.
             </p>
           </section>
@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
               2. Information We Collect
             </h2>
             <p>
-              Depending on how you use The Partner, we may collect information
+              Depending on how you use Partner, we may collect information
               such as your name, email address, account information, restaurant
               information, menu content, subscription information, and
               information required to provide and secure the service.
@@ -227,7 +227,7 @@ export default function PrivacyPolicyPage() {
             href="/"
             className="font-semibold text-[#171613]/55 hover:text-[#171613]"
           >
-              Back to The Partner
+              Back to Partner
           </Link>
         </div>
       </div>

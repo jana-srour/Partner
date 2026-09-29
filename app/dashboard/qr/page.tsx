@@ -748,12 +748,25 @@ export default function QRStudioPage() {
       format,
     };
 
+    const { data: existingRow, error: existingError } = await supabase
+      .from('restaurant_qr_designs')
+      .select('design')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    const existingDesign =
+      existingRow?.design && typeof existingRow.design === 'object'
+        ? existingRow.design as Record<string, unknown>
+        : {};
+
     const { error } = await supabase
       .from('restaurant_qr_designs')
       .upsert(
         {
           restaurant_id: restaurantId,
-          design,
+          design: { ...existingDesign, ...design },
           updated_at: new Date().toISOString(),
         },
         {

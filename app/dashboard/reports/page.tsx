@@ -233,7 +233,7 @@ export default function ReportsPage() {
                 className="mt-3 max-w-xl text-sm leading-6"
                 style={{ color: 'var(--portal-text-muted)' }}
               >
-                Turn your The Partner activity into clear business insights,
+                Turn your Partner activity into clear business insights,
                 performance trends and actionable decisions.
               </p>
             </div>

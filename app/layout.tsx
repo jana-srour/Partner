@@ -17,11 +17,11 @@ export const metadata: Metadata = {
     icon: "/thepartner-icon.png",
   },
   title: {
-    default: "The Partner",
-    template: "%s | The Partner",
+    default: "Partner",
+    template: "%s | Partner",
   },
   description:
-    "Digital restaurant menus and WhatsApp ordering powered by The Partner.",
+    "Digital restaurant menus and WhatsApp ordering powered by Partner.",
 };
 
 export default function RootLayout({

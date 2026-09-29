@@ -13,7 +13,7 @@ export default function AboutPage() {
   const handleFeedbackSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const subject = encodeURIComponent('The Partner feedback');
+    const subject = encodeURIComponent('Partner feedback');
     const body = encodeURIComponent(feedback.trim());
     window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
     setSent(true);
@@ -28,13 +28,13 @@ export default function AboutPage() {
               <Sparkles className="h-5 w-5" />
             </div>
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--portal-accent)' }}>
-              The Partner portal
+              Partner portal
             </p>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl" style={{ color: 'var(--portal-text)' }}>
               Built for smoother service.
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-7" style={{ color: 'var(--portal-muted)' }}>
-              The Partner brings your menu, orders, pricing, and team tools into one calm workspace so your restaurant can focus on the guest experience.
+              Partner brings your menu, orders, pricing, and team tools into one calm workspace so your restaurant can focus on the guest experience.
             </p>
           </div>
 
