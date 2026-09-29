@@ -152,40 +152,39 @@ export default function BranchesPage() {
     if (!rid) return;
 
     setLoading(true);
-    setError(null);
 
     const { data, error: branchesError } = await supabase
-      .from('restaurant_branches')
-      .select(
+        .from('restaurant_branches')
+        .select(
         `
-          id,
-          restaurant_id,
-          name,
-          code,
-          address,
-          phone,
-          email,
-          opening_time,
-          closing_time,
-          is_active,
-          is_main,
-          created_at,
-          updated_at
+            id,
+            restaurant_id,
+            name,
+            code,
+            address,
+            phone,
+            email,
+            opening_time,
+            closing_time,
+            is_active,
+            is_main,
+            created_at,
+            updated_at
         `,
-      )
-      .eq('restaurant_id', rid)
-      .order('is_main', { ascending: false })
-      .order('name', { ascending: true });
+        )
+        .eq('restaurant_id', rid)
+        .order('is_main', { ascending: false })
+        .order('name', { ascending: true });
 
     if (branchesError) {
-      setError(branchesError.message);
-      setBranches([]);
+        setError(branchesError.message);
+        setBranches([]);
     } else {
-      setBranches((data ?? []) as Branch[]);
+        setBranches((data ?? []) as Branch[]);
     }
 
     setLoading(false);
-  };
+    };
 
   // ----------------------------------------------------------
   // Initial load
@@ -357,81 +356,163 @@ export default function BranchesPage() {
 
   const saveBranch = async () => {
     if (!restaurantId) {
-      setError('Restaurant could not be identified.');
-      return;
+        setError('Restaurant could not be identified.');
+        return;
     }
 
     const name = form.name.trim();
+    const code = form.code.trim().toUpperCase();
 
     if (!name) {
-      setError('Branch name is required.');
-      return;
+        setError('Branch name is required.');
+        return;
     }
 
     if (form.email.trim()) {
-      const emailOk =
+        const emailOk =
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-          form.email.trim(),
+            form.email.trim(),
         );
 
-      if (!emailOk) {
+        if (!emailOk) {
         setError('Please enter a valid email address.');
         return;
-      }
+        }
     }
 
     setSaving(true);
     setError(null);
     setNotice(null);
 
-    const payload = {
-      restaurant_id: restaurantId,
-      name,
-      code: form.code.trim() || null,
-      address: form.address.trim() || null,
-      phone: form.phone.trim() || null,
-      email: form.email.trim() || null,
-      opening_time: normalizeTime(form.opening_time),
-      closing_time: normalizeTime(form.closing_time),
-      is_active: form.is_active,
-      is_main: form.is_main,
-    };
+    try {
+        // ----------------------------------------------------------
+        // Check branch code before creating/updating
+        // ----------------------------------------------------------
 
-    if (editingBranch) {
-      const { error: updateError } = await supabase
-        .from('restaurant_branches')
-        .update(payload)
-        .eq('id', editingBranch.id)
-        .eq('restaurant_id', restaurantId);
+        if (code) {
+        let codeQuery = supabase
+            .from('restaurant_branches')
+            .select('id, name')
+            .eq('restaurant_id', restaurantId)
+            .eq('code', code)
+            .limit(1);
 
-      if (updateError) {
-        setError(updateError.message);
+        if (editingBranch) {
+            codeQuery = codeQuery.neq(
+            'id',
+            editingBranch.id,
+            );
+        }
+
+        const {
+            data: existingCode,
+            error: codeCheckError,
+        } = await codeQuery.maybeSingle();
+
+        if (codeCheckError) {
+            throw new Error(
+            `Could not verify branch code: ${codeCheckError.message}`,
+            );
+        }
+
+        if (existingCode) {
+            setError(
+            `Branch code "${code}" already exists. Please use a different code.`,
+            );
+            setSaving(false);
+            return;
+        }
+        }
+
+        const payload = {
+        restaurant_id: restaurantId,
+        name,
+        code: code || null,
+        address: form.address.trim() || null,
+        phone: form.phone.trim() || null,
+        email: form.email.trim() || null,
+        opening_time: normalizeTime(form.opening_time),
+        closing_time: normalizeTime(form.closing_time),
+        is_active: form.is_active,
+        is_main: form.is_main,
+        };
+
+        // ----------------------------------------------------------
+        // Update
+        // ----------------------------------------------------------
+
+        if (editingBranch) {
+        const { error: updateError } = await supabase
+            .from('restaurant_branches')
+            .update(payload)
+            .eq('id', editingBranch.id)
+            .eq('restaurant_id', restaurantId);
+
+        if (updateError) {
+            // Database-level duplicate protection
+            if (updateError.code === '23505') {
+            setError(
+                `Branch code "${code}" already exists. Please use a different code.`,
+            );
+            } else {
+            setError(updateError.message);
+            }
+
+            setSaving(false);
+            return;
+        }
+
+        setNotice('Branch updated successfully.');
+        }
+
+        // ----------------------------------------------------------
+        // Create
+        // ----------------------------------------------------------
+
+        else {
+        const { error: insertError } = await supabase
+            .from('restaurant_branches')
+            .insert(payload);
+
+        if (insertError) {
+            // Database-level duplicate protection
+            if (insertError.code === '23505') {
+            setError(
+                `Branch code "${code}" already exists. Please use a different code.`,
+            );
+            } else {
+            setError(insertError.message);
+            }
+
+            setSaving(false);
+            return;
+        }
+
+        setNotice('Branch created successfully.');
+        }
+
+        // ----------------------------------------------------------
+        // IMPORTANT:
+        // Close modal and reload the actual database data.
+        // ----------------------------------------------------------
+
+        setModalOpen(false);
+        setEditingBranch(null);
+        setForm(emptyForm);
+
+        await loadBranches(restaurantId);
+    } catch (error) {
+        console.error('Failed to save branch:', error);
+
+        setError(
+        error instanceof Error
+            ? error.message
+            : 'Failed to save branch.',
+        );
+    } finally {
         setSaving(false);
-        return;
-      }
-
-      setNotice('Branch updated successfully.');
-    } else {
-      const { error: insertError } = await supabase
-        .from('restaurant_branches')
-        .insert(payload);
-
-      if (insertError) {
-        setError(insertError.message);
-        setSaving(false);
-        return;
-      }
-
-      setNotice('Branch created successfully.');
     }
-
-    setSaving(false);
-    setModalOpen(false);
-    setEditingBranch(null);
-    setForm(emptyForm);
-
-    await loadBranches();
-  };
+    };
 
   // ----------------------------------------------------------
   // Toggle active
@@ -887,16 +968,16 @@ export default function BranchesPage() {
                 />
 
                 <Field
-                  label="Branch code"
-                  value={form.code}
-                  onChange={(value) =>
-                    setForm((current) => ({
-                      ...current,
-                      code: value,
-                    }))
-                  }
-                  placeholder="e.g. HAM"
-                />
+                    label="Branch code"
+                    value={form.code}
+                    onChange={(value) =>
+                        setForm((current) => ({
+                        ...current,
+                        code: value.toUpperCase(),
+                        }))
+                    }
+                    placeholder="e.g. HAM"
+                    />
               </div>
 
               {/* Address */}
