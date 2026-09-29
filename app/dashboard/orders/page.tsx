@@ -76,6 +76,9 @@ type Order = {
   address: string;
   status: OrderStatus;
   channel: string;
+  branchId: string | null;
+  branchName: string;
+  branchCode: string;
   total: number;
   deliveryFee: number;
   createdAt: string;
@@ -97,6 +100,7 @@ type OrderRow = {
   customer_address: string | null;
   status: OrderStatus;
   channel: string;
+  branch_id: string | null;
   total: number;
   delivery_fee: number;
   created_at: string;
@@ -149,7 +153,10 @@ function isFeeEligibleOrder(order: Pick<Order, 'channel' | 'location'>) {
   return order.location === 'Delivery' || channel === 'delivery' || channel === 'takeaway' || channel === 'take away';
 }
 
-function mapOrder(row: OrderRow): Order {
+function mapOrder(
+  row: OrderRow,
+  branchDetails: Map<string, { name: string; code: string | null }>,
+): Order {
   const channel = row.channel || (row.customer_address ? 'Delivery' : 'Dine-in');
   const isDelivery = channel.trim().toLowerCase() === 'delivery' || Boolean(row.customer_address);
 
@@ -162,6 +169,9 @@ function mapOrder(row: OrderRow): Order {
     address: row.customer_address || '',
     status: row.status,
     channel,
+    branchId: row.branch_id,
+    branchName: row.branch_id ? branchDetails.get(row.branch_id)?.name || 'Unknown branch' : 'Unassigned',
+    branchCode: row.branch_id ? branchDetails.get(row.branch_id)?.code || '' : '',
     total: Number(row.total),
     deliveryFee: Number(row.delivery_fee) || 0,
     createdAt: new Date(row.created_at).toLocaleString('en-US', {
@@ -244,7 +254,7 @@ export default function OrdersPage() {
     let ordersQuery = supabase
       .from('orders')
       .select(
-        'id, order_number, customer_name, customer_phone, table_number, customer_address, status, channel, total, delivery_fee, created_at, order_items(item_name, quantity, unit_price)'
+        'id, order_number, customer_name, customer_phone, table_number, customer_address, status, channel, branch_id, total, delivery_fee, created_at, order_items(item_name, quantity, unit_price)'
       )
       .eq('restaurant_id', id);
 
@@ -263,7 +273,15 @@ export default function OrdersPage() {
       return;
     }
 
-    setOrders(((data || []) as OrderRow[]).map(mapOrder));
+    const rows = (data || []) as OrderRow[];
+    const branchIds = [...new Set(rows.map((row) => row.branch_id).filter((branchId): branchId is string => Boolean(branchId)))];
+    const { data: branchRows } = branchIds.length
+      ? await supabase.from('restaurant_branches').select('id, name, code').in('id', branchIds)
+      : { data: [] };
+    const branchDetails = new Map(
+      (branchRows || []).map((branch) => [branch.id, { name: branch.name, code: branch.code }])
+    );
+    setOrders(rows.map((row) => mapOrder(row, branchDetails)));
   }, []);
 
   const loadEditableMenu = useCallback(async (id: string) => {
@@ -1167,6 +1185,9 @@ export default function OrdersPage() {
                                     ? `${order.customer} · ${order.channel} · Inside restaurant`
                                     : `${order.customer} · Delivery`}{' '}
                                   · {order.createdAt}
+                                </p>
+                                <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--portal-accent)' }}>
+                                  Branch: {order.branchName} · {order.branchCode || order.branchId?.slice(0, 8) || 'Unassigned'}
                                 </p>
 
                                 {order.location === 'Delivery' ? (

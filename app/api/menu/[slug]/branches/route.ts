@@ -30,7 +30,7 @@ export async function GET(
 
     const { data: branches, error } = await admin
       .from('restaurant_branches')
-      .select('id, name, is_main')
+      .select('id, name, code, is_main, latitude, longitude')
       .eq('restaurant_id', restaurant.id)
       .eq('is_active', true)
       .order('is_main', { ascending: false })

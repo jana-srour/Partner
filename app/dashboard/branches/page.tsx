@@ -28,6 +28,8 @@ type Branch = {
   name: string;
   code: string | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   phone: string | null;
   email: string | null;
   opening_time: string | null;
@@ -42,6 +44,8 @@ type FormState = {
   name: string;
   code: string;
   address: string;
+  latitude: string;
+  longitude: string;
   phone: string;
   email: string;
   opening_time: string;
@@ -54,6 +58,8 @@ const emptyForm: FormState = {
   name: '',
   code: '',
   address: '',
+  latitude: '',
+  longitude: '',
   phone: '',
   email: '',
   opening_time: '',
@@ -163,6 +169,8 @@ export default function BranchesPage() {
             name,
             code,
             address,
+            latitude,
+            longitude,
             phone,
             email,
             opening_time,
@@ -338,6 +346,8 @@ export default function BranchesPage() {
       name: branch.name,
       code: branch.code ?? '',
       address: branch.address ?? '',
+      latitude: branch.latitude === null ? '' : String(branch.latitude),
+      longitude: branch.longitude === null ? '' : String(branch.longitude),
       phone: branch.phone ?? '',
       email: branch.email ?? '',
       opening_time: formatTime(branch.opening_time),
@@ -375,6 +385,17 @@ export default function BranchesPage() {
     if (!name) {
         setError('Branch name is required.');
         return;
+    }
+
+    const latitude = form.latitude.trim() ? Number(form.latitude) : null;
+    const longitude = form.longitude.trim() ? Number(form.longitude) : null;
+    if (
+      (latitude === null) !== (longitude === null) ||
+      (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) ||
+      (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))
+    ) {
+      setError('Enter both valid coordinates, or leave both fields empty.');
+      return;
     }
 
     if (form.email.trim()) {
@@ -438,6 +459,8 @@ export default function BranchesPage() {
         name,
         code: code || null,
         address: form.address.trim() || null,
+        latitude,
+        longitude,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
         opening_time: normalizeTime(form.opening_time),
@@ -1016,6 +1039,29 @@ export default function BranchesPage() {
                 }
                 placeholder="Branch address"
               />
+
+              <div>
+                <p className="mb-2 text-sm font-semibold text-slate-700">Map coordinates</p>
+                <p className="mb-3 text-xs text-slate-500">
+                  Used to suggest the nearest branch for delivery. Leave both blank to use the main branch by default.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field
+                    label="Latitude"
+                    type="number"
+                    value={form.latitude}
+                    onChange={(value) => setForm((current) => ({ ...current, latitude: value }))}
+                    placeholder="e.g. 33.8938"
+                  />
+                  <Field
+                    label="Longitude"
+                    type="number"
+                    value={form.longitude}
+                    onChange={(value) => setForm((current) => ({ ...current, longitude: value }))}
+                    placeholder="e.g. 35.5018"
+                  />
+                </div>
+              </div>
 
               {/* Phone / Email */}
               <div className="grid gap-4 sm:grid-cols-2">

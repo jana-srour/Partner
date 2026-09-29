@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { subscribeRestaurantRealtime } from '@/lib/live-sync';
@@ -44,7 +44,10 @@ interface MenuExtra {
 interface PublicBranch {
   id: string;
   name: string;
+  code: string | null;
   is_main: boolean;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface MenuItem {
@@ -121,6 +124,10 @@ export default function PublicMenuPage() {
 
   const [branches, setBranches] = useState<PublicBranch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [branchManuallySelected, setBranchManuallySelected] = useState(false);
+  const [findingNearestBranch, setFindingNearestBranch] = useState(false);
+  const [branchRoutingMessage, setBranchRoutingMessage] = useState('');
+  const branchSelectionInitialized = useRef(false);
 
   const [selectedCategory, setSelectedCategory] =
     useState<string>('all');
@@ -685,9 +692,9 @@ export default function PublicMenuPage() {
         : { branches: [] };
       const activeBranches = branchPayload.branches || [];
       setBranches(activeBranches);
-      setSelectedBranchId(
-        activeBranches.find((branch) => branch.is_main)?.id || activeBranches[0]?.id || ''
-      );
+      const mainBranchId = activeBranches.find((branch) => branch.is_main)?.id || activeBranches[0]?.id || '';
+      setSelectedBranchId(mainBranchId);
+      branchSelectionInitialized.current = true;
 
       await fetchMenu(
         restaurantData.id
@@ -1064,6 +1071,57 @@ export default function PublicMenuPage() {
   // CREATE DATABASE ORDER
   // ==================================================
 
+  const findNearestBranch = async () => {
+    const geoBranches = branches.filter(
+      (branch) => branch.latitude !== null && branch.longitude !== null
+    );
+    if (!geoBranches.length || !navigator.geolocation) return null;
+
+    const position = await new Promise<GeolocationPosition | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        () => resolve(null),
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+      );
+    });
+    if (!position) return null;
+
+    const radians = (degrees: number) => (degrees * Math.PI) / 180;
+    const distanceKm = (branch: PublicBranch) => {
+      const deltaLatitude = radians(Number(branch.latitude) - position.coords.latitude);
+      const deltaLongitude = radians(Number(branch.longitude) - position.coords.longitude);
+      const startLatitude = radians(position.coords.latitude);
+      const endLatitude = radians(Number(branch.latitude));
+      const haversine =
+        Math.sin(deltaLatitude / 2) ** 2 +
+        Math.cos(startLatitude) * Math.cos(endLatitude) *
+        Math.sin(deltaLongitude / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    };
+
+    return geoBranches.reduce((nearest, branch) =>
+      distanceKm(branch) < distanceKm(nearest) ? branch : nearest
+    );
+  };
+
+  const selectDeliveryOrderType = async () => {
+    setOrderType('Delivery');
+    setBranchRoutingMessage('');
+    if (branchManuallySelected || !branchSelectionInitialized.current) return;
+
+    setFindingNearestBranch(true);
+    const nearestBranch = await findNearestBranch();
+    if (nearestBranch) {
+      setSelectedBranchId(nearestBranch.id);
+      setBranchRoutingMessage(`Nearest branch selected: ${nearestBranch.name}`);
+    } else {
+      const mainBranch = branches.find((branch) => branch.is_main) || branches[0];
+      if (mainBranch) setSelectedBranchId(mainBranch.id);
+      setBranchRoutingMessage('Using the main branch. Allow location access and add branch coordinates for nearest-branch routing.');
+    }
+    setFindingNearestBranch(false);
+  };
+
   const createDatabaseOrder = async (
     channel: 'Waiter' | 'WhatsApp'
   ) => {
@@ -1078,6 +1136,35 @@ export default function PublicMenuPage() {
       return {
         success: false,
         error: 'Your order is empty.',
+      };
+    }
+
+    let orderBranchId = selectedBranchId;
+    if (orderType === 'Delivery' && !branchManuallySelected) {
+      setFindingNearestBranch(true);
+      const nearestBranch = await findNearestBranch();
+      setFindingNearestBranch(false);
+      const mainBranch = branches.find((branch) => branch.is_main) || branches[0];
+      orderBranchId = nearestBranch?.id || mainBranch?.id || selectedBranchId;
+      if (orderBranchId) setSelectedBranchId(orderBranchId);
+      setBranchRoutingMessage(
+        nearestBranch
+          ? `Nearest branch selected: ${nearestBranch.name}`
+          : 'Location unavailable; using the main branch.'
+      );
+    }
+
+    if (!orderBranchId || !branches.some((branch) => branch.id === orderBranchId)) {
+      return { success: false, error: 'Please choose an active branch for this order.' };
+    }
+
+    const unavailableCartItem = cart.find((item) =>
+      item.branch_ids && item.branch_ids.length > 0 && !item.branch_ids.includes(orderBranchId)
+    );
+    if (unavailableCartItem) {
+      return {
+        success: false,
+        error: `${unavailableCartItem.name} is not available at ${branches.find((branch) => branch.id === selectedBranchId)?.name || 'the selected branch'}. Remove it or choose another branch.`,
       };
     }
 
@@ -1117,7 +1204,7 @@ export default function PublicMenuPage() {
         .insert({
           id: orderId,
           restaurant_id: restaurant.id,
-          branch_id: selectedBranchId || null,
+          branch_id: orderBranchId,
           customer_name:
             orderType === 'Delivery'
               ? customerName.trim()
@@ -3057,8 +3144,11 @@ export default function PublicMenuPage() {
               <select
                 id="public-menu-branch"
                 value={selectedBranchId}
-                disabled={cart.length > 0}
-                onChange={(event) => setSelectedBranchId(event.target.value)}
+                onChange={(event) => {
+                  setBranchManuallySelected(true);
+                  setBranchRoutingMessage('');
+                  setSelectedBranchId(event.target.value);
+                }}
                 className="min-w-0 rounded-xl border px-3 py-2 text-sm disabled:opacity-60 sm:min-w-64"
                 style={{ background: theme.public_surface, color: theme.public_text, borderColor: theme.public_border }}
               >
@@ -4766,7 +4856,7 @@ export default function PublicMenuPage() {
                                 {availableOrderingOptions.includes('delivery') && (
                                 <button
                                   type="button"
-                                  onClick={() => setOrderType('Delivery')}
+                                  onClick={selectDeliveryOrderType}
                                   className="h-10 rounded-xl border text-[9px] uppercase tracking-[.12em] font-black transition-all"
                                   style={{
                                     borderColor:
@@ -4788,6 +4878,34 @@ export default function PublicMenuPage() {
                                 )}
                               </div>
                             </div>
+
+                            {orderType === 'Delivery' && branches.length > 0 && (
+                              <div className="mt-3 rounded-xl border p-3" style={{ borderColor: `${theme.public_border}75`, background: 'rgba(255,255,255,0.035)' }}>
+                                <label htmlFor="delivery-branch" className="mb-1.5 block text-[8px] font-black uppercase tracking-[.2em]" style={{ color: 'rgba(255,255,255,0.68)' }}>
+                                  Delivery branch
+                                </label>
+                                <select
+                                  id="delivery-branch"
+                                  value={selectedBranchId}
+                                  onChange={(event) => {
+                                    setBranchManuallySelected(true);
+                                    setBranchRoutingMessage('');
+                                    setSelectedBranchId(event.target.value);
+                                  }}
+                                  className="h-10 w-full rounded-xl border px-3 text-[10px] outline-none"
+                                  style={{ background: 'rgba(255,255,255,0.045)', color: '#fff', borderColor: `${theme.public_border}75` }}
+                                >
+                                  {branches.map((branch) => (
+                                    <option key={branch.id} value={branch.id} style={{ color: '#202534' }}>
+                                      {branch.name}{branch.code ? ` · ${branch.code}` : ''}{branch.is_main ? ' · Main' : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="mt-1.5 text-[9px]" style={{ color: 'rgba(255,255,255,0.62)' }}>
+                                  {findingNearestBranch ? 'Finding the nearest branch…' : branchRoutingMessage || 'You can change the branch for this delivery.'}
+                                </p>
+                              </div>
+                            )}
 
                             {/* ORDER DETAILS */}
 
