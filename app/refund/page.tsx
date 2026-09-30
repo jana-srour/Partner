@@ -60,7 +60,7 @@ export default function RefundPolicyPage() {
               3. Subscription Charges
             </h2>
             <p>
-              NOVAMENU subscriptions are billed according to the plan and
+              PARTNER subscriptions are billed according to the plan and
               billing interval selected during checkout. Subscription prices
               are displayed before payment is completed.
             </p>
@@ -90,7 +90,7 @@ export default function RefundPolicyPage() {
             </h2>
             <p>
               Customers may cancel their subscription through the available
-              NOVAMENU billing or customer portal tools. Cancellation normally
+              PARTNER billing or customer portal tools. Cancellation normally
               prevents future subscription renewals but does not automatically
               refund charges that have already been processed.
             </p>

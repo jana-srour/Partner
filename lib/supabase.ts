@@ -4,7 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /*
- * NOVAMENU authentication storage
+ * PARTNER authentication storage
  *
  * Remember Me = true
  *   → localStorage
@@ -18,7 +18,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
  * can dynamically use the correct storage mechanism.
  */
 
-const REMEMBER_ME_KEY = 'novamenu_remember_me';
+const REMEMBER_ME_KEY = 'partner_remember_me';
 
 const authStorage = {
   getItem(key: string) {

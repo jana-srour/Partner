@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>We may use collected information to:</p>
             <ul className="mt-3 list-disc space-y-2 pl-6">
-              <li>Create and manage NOVAMENU accounts.</li>
+              <li>Create and manage PARTNER accounts.</li>
               <li>Provide restaurant menu and management functionality.</li>
               <li>Process subscriptions and payments.</li>
               <li>Provide customer support.</li>
@@ -77,13 +77,13 @@ export default function PrivacyPolicyPage() {
               4. Restaurant and Customer Data
             </h2>
             <p>
-              Restaurants may publish information through NOVAMENU that is
+              Restaurants may publish information through PARTNER that is
               visible to their customers, including menus, prices, restaurant
               details, images, and ordering information.
             </p>
             <p className="mt-3">
               Restaurants are responsible for ensuring that information they
-              provide through NOVAMENU is lawful and that they have the
+              provide through PARTNER is lawful and that they have the
               necessary rights and permissions to provide it.
             </p>
           </section>
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               Payments and subscription transactions are processed through
-              third-party payment providers. NOVAMENU does not intentionally
+              third-party payment providers. PARTNER does not intentionally
               store complete payment card information. Payment providers may
               collect and process payment information according to their own
               privacy policies and terms.
@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               We may use trusted third-party service providers to operate
-              NOVAMENU, including providers for hosting, authentication,
+              PARTNER, including providers for hosting, authentication,
               databases, payments, analytics, communications, and security.
               These providers receive only the information reasonably required
               to perform their services.
@@ -159,7 +159,7 @@ export default function PrivacyPolicyPage() {
               10. Cookies and Similar Technologies
             </h2>
             <p>
-              NOVAMENU may use cookies or similar technologies when necessary
+              PARTNER may use cookies or similar technologies when necessary
               for authentication, security, functionality, analytics, or
               improving the service. Browser settings may allow you to control
               certain cookies, although disabling them may affect some
@@ -172,7 +172,7 @@ export default function PrivacyPolicyPage() {
               11. Children&apos;s Privacy
             </h2>
             <p>
-              NOVAMENU is intended for businesses and their authorized users.
+              PARTNER is intended for businesses and their authorized users.
               We do not knowingly collect personal information from children
               in violation of applicable law.
             </p>
@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
             <p>
               We may update this Privacy Policy from time to time. Changes
               will be published on this page with an updated date. Your
-              continued use of NOVAMENU after changes take effect is subject
+              continued use of PARTNER after changes take effect is subject
               to the updated policy, where permitted by law.
             </p>
           </section>

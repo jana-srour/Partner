@@ -25,6 +25,7 @@ import {
   GripVertical,
   ImagePlus,
   Link as LinkIcon,
+  Lock,
   Upload,
   Tag,
   Percent,
@@ -113,6 +114,7 @@ export default function MenuManagementPage() {
 
   const [hasMenuAccess, setHasMenuAccess] = useState(false);
   const [planAllowed, setPlanAllowed] = useState(false);
+  const [branchFeatureAllowed, setBranchFeatureAllowed] = useState(false);
 
   // Category modal
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -248,6 +250,14 @@ export default function MenuManagementPage() {
         'menu'
       );
 
+      setBranchFeatureAllowed(subscriptionAllows(
+        subscription as {
+          plan_code: BillingPlan;
+          status: SubscriptionStatus;
+          trial_ends_at: string;
+        } | null,
+        'branches'
+      ));
       setPlanAllowed(allowed);
 
       if (!allowed) {
@@ -2813,29 +2823,44 @@ export default function MenuManagementPage() {
           </div>
         )}
 
-        {/* =================================================
-            FOOTER
-        ================================================= */}
+        {/* FOOTER */}
 
-        <div className="py-10 text-center">
+        <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+          <div
+            className="mx-auto flex max-w-[1400px] items-center justify-between border-t pt-5"
+            style={{ borderColor: 'var(--portal-border)' }}
+          >
+            <div className="py-10 text-center">
 
-          <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2">
 
-            <div className="w-5 h-5 overflow-hidden rounded-md">
-              <img
-                src="/partnerlogo-icon.png"
-                alt="Partner"
-                className="h-full w-full object-cover"
-              />
+                <div className="w-5 h-5 overflow-hidden rounded-md">
+                  <img
+                    src="/partnerlogo-icon.png"
+                    alt="Partner"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
+                  Partner
+                </span>
+
+              </div>
+
             </div>
 
-            <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
-              Partner
-            </span>
-
+            <p
+              className="text-[9px]"
+              style={{
+                color: 'var(--portal-text)',
+                opacity: 0.4,
+              }}
+            >
+              Menu Workspace
+            </p>
           </div>
-
-        </div>
+        </footer>
 
       </div>
 
@@ -3141,44 +3166,53 @@ export default function MenuManagementPage() {
                       Choose where customers can see this item.
                     </p>
                   </div>
-                  <label className="flex shrink-0 items-center gap-2 text-xs font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={itemForm.all_branches}
-                      onChange={(event) => setItemForm((current) => ({
-                        ...current,
-                        all_branches: event.target.checked,
-                        branch_ids: event.target.checked ? [] : current.branch_ids,
-                      }))}
-                      className="h-4 w-4 accent-[#536DFE]"
-                    />
-                    All branches
-                  </label>
                 </div>
 
-                {!itemForm.all_branches && (
-                  <div className="mt-4 grid gap-2 border-t border-[#E7E4DE] pt-3 sm:grid-cols-2">
-                    {branches.length === 0 ? (
-                      <p className="text-xs text-[#756F66]">
-                        No active branches are available. Enable a branch to assign this item.
-                      </p>
-                    ) : branches.map((branch) => (
-                      <label key={branch.id} className="flex items-center gap-2 text-xs font-medium">
-                        <input
-                          type="checkbox"
-                          checked={itemForm.branch_ids.includes(branch.id)}
-                          onChange={(event) => setItemForm((current) => ({
-                            ...current,
-                            branch_ids: event.target.checked
-                              ? [...current.branch_ids, branch.id]
-                              : current.branch_ids.filter((id) => id !== branch.id),
-                          }))}
-                          className="h-4 w-4 accent-[#536DFE]"
-                        />
-                        {branch.name}
-                      </label>
-                    ))}
-                  </div>
+                {!branchFeatureAllowed ? (
+                  <p className="mt-3 flex items-center gap-2 border-t border-[#E7E4DE] pt-3 text-xs font-semibold text-[#756F66]">
+                    <Lock className="h-3.5 w-3.5 shrink-0" />
+                    Branch availability requires the Enterprise plan.
+                  </p>
+                ) : (
+                  <>
+                    <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={itemForm.all_branches}
+                        onChange={(event) => setItemForm((current) => ({
+                          ...current,
+                          all_branches: event.target.checked,
+                          branch_ids: event.target.checked ? [] : current.branch_ids,
+                        }))}
+                        className="h-4 w-4 accent-[#536DFE]"
+                      />
+                      All branches
+                    </label>
+                    {!itemForm.all_branches && (
+                      <div className="mt-4 grid gap-2 border-t border-[#E7E4DE] pt-3 sm:grid-cols-2">
+                        {branches.length === 0 ? (
+                          <p className="text-xs text-[#756F66]">
+                            No active branches are available. Enable a branch to assign this item.
+                          </p>
+                        ) : branches.map((branch) => (
+                          <label key={branch.id} className="flex items-center gap-2 text-xs font-medium">
+                            <input
+                              type="checkbox"
+                              checked={itemForm.branch_ids.includes(branch.id)}
+                              onChange={(event) => setItemForm((current) => ({
+                                ...current,
+                                branch_ids: event.target.checked
+                                  ? [...current.branch_ids, branch.id]
+                                  : current.branch_ids.filter((id) => id !== branch.id),
+                              }))}
+                              className="h-4 w-4 accent-[#536DFE]"
+                            />
+                            {branch.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </section>
 

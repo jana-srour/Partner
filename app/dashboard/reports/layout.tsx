@@ -12,6 +12,8 @@ import {
   DollarSign,
   Users,
   Activity,
+  GitBranch,
+  LockKeyhole,
   FileSpreadsheet,
 } from 'lucide-react';
 import { PlanRequired } from '@/app/dashboard/components/plan-required';
@@ -36,7 +38,12 @@ const isSubscriptionStatus = (
   value === 'canceled' ||
   value === 'expired';
 
-const reportNavigation = [
+const reportNavigation: {
+  name: string;
+  href: string;
+  icon: typeof BarChart3;
+  enterprise?: boolean;
+}[] = [
   {
     name: 'Overview',
     href: '/dashboard/reports',
@@ -78,6 +85,12 @@ const reportNavigation = [
     icon: Activity,
   },
   {
+    name: 'Branches',
+    href: '/dashboard/reports/branches',
+    icon: GitBranch,
+    enterprise: true,
+  },
+  {
     name: 'Export Center',
     href: '/dashboard/reports/exports',
     icon: FileSpreadsheet,
@@ -92,6 +105,7 @@ export default function ReportsLayout({
   const pathname = usePathname();
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [reportsAllowed, setReportsAllowed] = useState(false);
+  const [branchesAllowed, setBranchesAllowed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +117,7 @@ export default function ReportsLayout({
       if (!user) {
         if (!cancelled) {
           setReportsAllowed(false);
+          setBranchesAllowed(false);
           setCheckingPlan(false);
         }
         return;
@@ -118,6 +133,7 @@ export default function ReportsLayout({
       if (!membership) {
         if (!cancelled) {
           setReportsAllowed(false);
+          setBranchesAllowed(false);
           setCheckingPlan(false);
         }
         return;
@@ -142,9 +158,23 @@ export default function ReportsLayout({
           },
           'reports'
         );
+      const branchesFeature =
+        subscription &&
+        isBillingPlan(subscription.plan_code) &&
+        isSubscriptionStatus(subscription.status) &&
+        typeof subscription.trial_ends_at === 'string' &&
+        subscriptionAllows(
+          {
+            plan_code: subscription.plan_code,
+            status: subscription.status,
+            trial_ends_at: subscription.trial_ends_at,
+          },
+          'branches'
+        );
 
       if (!cancelled) {
         setReportsAllowed(Boolean(allowed));
+        setBranchesAllowed(Boolean(branchesFeature));
         setCheckingPlan(false);
       }
     };
@@ -254,6 +284,9 @@ export default function ReportsLayout({
                     <Icon className="h-3.5 w-3.5" />
 
                     <span>{item.name}</span>
+                    {item.enterprise && !branchesAllowed && (
+                      <LockKeyhole className="h-3 w-3 opacity-55" aria-label="Enterprise plan required" />
+                    )}
                   </Link>
                 );
               })}

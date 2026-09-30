@@ -4,13 +4,14 @@ import {
   BarChart3,
   CalendarDays,
   CheckCircle2,
-  Clock3,
   Download,
   FileArchive,
   FileSpreadsheet,
   FileText,
   Filter,
+  GitBranch,
   History,
+  LockKeyhole,
   Package,
   ReceiptText,
   RefreshCw,
@@ -18,8 +19,14 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { startTransition, useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx-js-style';
+import { supabase } from '@/lib/supabase';
+import {
+  subscriptionAllows,
+  type BillingPlan,
+  type SubscriptionStatus,
+} from '@/lib/billing/plans';
 
 import {
   getReportsData,
@@ -27,10 +34,7 @@ import {
   type ReportsData,
 } from '@/lib/reports/data';
 
-import {
-  downloadCsv,
-  printReportAsPdf,
-} from '@/lib/reports/export';
+import { printReportAsPdf } from '@/lib/reports/export';
 
 type ReportType =
   | 'sales'
@@ -39,7 +43,8 @@ type ReportType =
   | 'promotions'
   | 'pricing'
   | 'customers'
-  | 'operations';
+  | 'operations'
+  | 'branches';
 
 type Period = '7d' | '30d' | '90d' | '12m' | 'custom';
 
@@ -90,6 +95,12 @@ const reportTypes: {
     label: 'Operations',
     description: 'Order workload and operational metrics',
     icon: RefreshCw,
+  },
+  {
+    key: 'branches',
+    label: 'Branch Management',
+    description: 'Branch comparison and order activity',
+    icon: GitBranch,
   },
 ];
 
@@ -163,18 +174,6 @@ function formatDate(value: unknown) {
   return date.toLocaleString();
 }
 
-function formatDateOnly(value: unknown) {
-  if (!value) return '';
-
-  const date = new Date(String(value));
-
-  if (Number.isNaN(date.getTime())) {
-    return safeString(value);
-  }
-
-  return date.toLocaleDateString();
-}
-
 function reportLabel(report: ReportType) {
   return (
     reportTypes.find((item) => item.key === report)?.label ||
@@ -200,6 +199,10 @@ function buildExportSheets(
       category.id,
       category.name,
     ]),
+  );
+
+  const branchMap = new Map(
+    data.branches.map((branch) => [branch.id, branch.name]),
   );
 
   const totalRevenue = data.orders.reduce(
@@ -241,7 +244,7 @@ function buildExportSheets(
   /* ------------------------------------------------------------------------ */
 
   sheets['Executive Summary'] = [
-    ['NOVAMENU'],
+    ['PARTNER'],
     [`${reportLabel(report)} Report`],
     [],
     ['REPORT INFORMATION'],
@@ -264,7 +267,7 @@ function buildExportSheets(
     [],
     ['REPORT NOTES'],
     [
-      'This workbook was generated from the selected restaurant data in NOVAMENU.',
+      'This workbook was generated from the selected restaurant data in PARTNER.',
     ],
     [
       'Values reflect the selected reporting period and the data available at export time.',
@@ -287,6 +290,7 @@ function buildExportSheets(
         'Status',
         'Channel',
         'Service / Table',
+        'Branch',
         'Total',
         'Created At',
       ],
@@ -297,6 +301,7 @@ function buildExportSheets(
         order.status || '',
         order.channel || '',
         getOrderServiceLabel(order),
+        branchMap.get(order.branch_id || '') || 'Unassigned',
         money(order.total),
         formatDate(order.created_at),
       ]),
@@ -650,6 +655,61 @@ function buildExportSheets(
     ];
   }
 
+  if (report === 'branches') {
+    const branchRows = data.branches.map((branch) => {
+      const branchOrders = data.orders.filter(
+        (order) => order.branch_id === branch.id,
+      );
+      const deliveredOrders = branchOrders.filter((order) =>
+        ['completed', 'delivered', 'paid'].includes(
+          safeString(order.status).toLowerCase(),
+        ),
+      );
+      const revenue = deliveredOrders.reduce(
+        (sum, order) => sum + money(order.total),
+        0,
+      );
+
+      return [
+        branch.name,
+        branch.code || '',
+        branch.is_main ? 'Yes' : 'No',
+        branch.is_active ? 'Active' : 'Inactive',
+        branchOrders.length,
+        deliveredOrders.length,
+        revenue,
+        deliveredOrders.length > 0 ? revenue / deliveredOrders.length : 0,
+      ];
+    }).sort((first, second) => money(second[6]) - money(first[6]));
+
+    sheets['Branch Performance'] = [
+      [
+        'Branch',
+        'Code',
+        'Main Branch',
+        'Status',
+        'Total Orders',
+        'Delivered Orders',
+        'Delivered Revenue',
+        'Average Delivered Order',
+      ],
+      ...branchRows,
+    ];
+
+    sheets['Branch Orders'] = [
+      ['Branch', 'Order ID', 'Customer', 'Status', 'Channel', 'Total', 'Created At'],
+      ...data.orders.map((order) => [
+        branchMap.get(order.branch_id || '') || 'Unassigned',
+        formatOrderNumber(order.order_number),
+        order.customer_name || 'Guest',
+        order.status || '',
+        order.channel || '',
+        money(order.total),
+        formatDate(order.created_at),
+      ]),
+    ];
+  }
+
   return sheets;
 }
 
@@ -820,163 +880,6 @@ function styleTitle(
   void subtitleEnd;
 }
 
-function styleDataSheet(
-  sheet: XLSX.WorkSheet,
-  rows: unknown[][],
-  headerRow = 3,
-) {
-  const header = rows[headerRow];
-
-  if (!header) return;
-
-  const columnCount = header.length;
-
-  /* Header */
-  for (let column = 0; column < columnCount; column += 1) {
-    const address = XLSX.utils.encode_cell({
-      r: headerRow,
-      c: column,
-    });
-
-    setCellStyle(sheet, address, {
-      font: {
-        bold: true,
-        color: {
-          rgb: EXCEL_COLORS.white,
-        },
-        sz: 10,
-      },
-      fill: {
-        fgColor: {
-          rgb: EXCEL_COLORS.navy,
-      },
-      },
-      alignment: {
-        vertical: 'center',
-        horizontal: 'left',
-        wrapText: true,
-      },
-      border: thinBorder,
-    });
-  }
-
-  /* Data rows */
-  for (
-    let row = headerRow + 1;
-    row < rows.length;
-    row += 1
-  ) {
-    for (
-      let column = 0;
-      column < columnCount;
-      column += 1
-    ) {
-      const address = XLSX.utils.encode_cell({
-        r: row,
-        c: column,
-      });
-
-      const cell = sheet[address];
-
-      if (!cell) continue;
-
-      setCellStyle(sheet, address, {
-        font: {
-          color: {
-            rgb: EXCEL_COLORS.black,
-          },
-          sz: 10,
-        },
-        fill: {
-          fgColor: {
-            rgb:
-              (row - headerRow) % 2 === 0
-                ? EXCEL_COLORS.white
-                : EXCEL_COLORS.light,
-          },
-        },
-        border: thinBorder,
-        alignment: {
-          vertical: 'center',
-        },
-      });
-    }
-  }
-
-  sheet['!autofilter'] = {
-    ref: XLSX.utils.encode_range({
-      s: {
-        r: headerRow,
-        c: 0,
-      },
-      e: {
-        r: Math.max(rows.length - 1, headerRow),
-        c: columnCount - 1,
-      },
-    }),
-  };
-
-  sheet['!freeze'] = {
-    xSplit: 0,
-    ySplit: headerRow + 1,
-  };
-}
-
-function setNumberFormats(
-  sheet: XLSX.WorkSheet,
-  rows: unknown[][],
-  headerRow: number,
-) {
-  const headers = rows[headerRow];
-
-  if (!headers) return;
-
-  headers.forEach((header, column) => {
-    const normalized = safeString(header)
-      .toLowerCase()
-      .trim();
-
-    for (
-      let row = headerRow + 1;
-      row < rows.length;
-      row += 1
-    ) {
-      const address = XLSX.utils.encode_cell({
-        r: row,
-        c: column,
-      });
-
-      if (!sheet[address]) continue;
-
-      if (
-        normalized.includes('price') ||
-        normalized.includes('revenue') ||
-        normalized.includes('spend') ||
-        normalized.includes('total') ||
-        normalized.includes('value') ||
-        normalized.includes('change')
-      ) {
-        sheet[address].z = '#,##0.00';
-      }
-
-      if (
-        normalized.includes('rate') ||
-        normalized.includes('share')
-      ) {
-        sheet[address].z = '0.0%';
-      }
-
-      if (
-        normalized.includes('quantity') ||
-        normalized === 'orders' ||
-        normalized.includes('items sold')
-      ) {
-        sheet[address].z = '#,##0';
-      }
-    }
-  });
-}
-
 function autoSizeSheet(
   sheet: XLSX.WorkSheet,
   rows: unknown[][],
@@ -1047,11 +950,14 @@ function buildProfessionalWorkbook(
 ) {
   const workbook = XLSX.utils.book_new();
 
-  const sheets = buildExportSheets(
+  const exportSheets = buildExportSheets(
     report,
     data,
     periodLabel,
   );
+  const sheets = {
+    'Executive Summary': exportSheets['Executive Summary'] || [],
+  };
 
   /* ------------------------------------------------------------------------ */
   /* EXECUTIVE SUMMARY                                                        */
@@ -1067,7 +973,7 @@ function buildProfessionalWorkbook(
 
   styleTitle(
     summarySheet,
-    'NOVAMENU',
+    'PARTNER',
     `${reportLabel(report)} · ${periodLabel}`,
     summaryLastColumn,
   );
@@ -1155,53 +1061,7 @@ function buildProfessionalWorkbook(
     },
   ];
 
-  const kpiRows = [
-    {
-      label: 'Total Revenue',
-      value: summaryRows[11]?.[1] ?? 0,
-      format: '#,##0.00',
-    },
-    {
-      label: 'Total Orders',
-      value: summaryRows[12]?.[1] ?? 0,
-      format: '#,##0',
-    },
-    {
-      label: 'Average Order Value',
-      value: summaryRows[13]?.[1] ?? 0,
-      format: '#,##0.00',
-    },
-    {
-      label: 'Order Items',
-      value: summaryRows[14]?.[1] ?? 0,
-      format: '#,##0',
-    },
-    {
-      label: 'Completed Orders',
-      value: summaryRows[15]?.[1] ?? 0,
-      format: '#,##0',
-    },
-    {
-      label: 'Cancelled Orders',
-      value: summaryRows[16]?.[1] ?? 0,
-      format: '#,##0',
-    },
-    {
-      label: 'Completion Rate',
-      value: summaryRows[17]?.[1] ?? 0,
-      format: '0.0%',
-    },
-    {
-      label: 'Menu Items',
-      value: summaryRows[18]?.[1] ?? 0,
-      format: '#,##0',
-    },
-    {
-      label: 'Active Promotions',
-      value: summaryRows[19]?.[1] ?? 0,
-      format: '#,##0',
-    },
-  ];
+  const kpiRows: { label: string; value: unknown; format: string }[] = [];
 
   const kpiStartRow = 11;
   const kpiColumns = 3;
@@ -1383,33 +1243,91 @@ function buildProfessionalWorkbook(
     ];
   }
 
-  summarySheet['!cols'] = [
-    { wch: 24 },
-    { wch: 18 },
-    { wch: 4 },
-    { wch: 24 },
-    { wch: 18 },
-    { wch: 4 },
+  const combinedRows = [...summaryRows];
+  let sectionRow = combinedRows.length + 1;
+
+  for (const [name, rows] of Object.entries(exportSheets)) {
+    if (name === 'Executive Summary' || rows.length === 0) continue;
+
+    const sectionRows = [
+      [name.toUpperCase()],
+      ...rows,
+      [],
+    ];
+    XLSX.utils.sheet_add_aoa(summarySheet, sectionRows, {
+      origin: `A${sectionRow + 1}`,
+    });
+    combinedRows.push(...sectionRows);
+
+    const sectionAddress = XLSX.utils.encode_cell({ r: sectionRow, c: 0 });
+    setCellStyle(summarySheet, sectionAddress, {
+      font: { bold: true, color: { rgb: EXCEL_COLORS.white }, sz: 11 },
+      fill: { fgColor: { rgb: EXCEL_COLORS.accent } },
+      alignment: { vertical: 'center' },
+    });
+
+    const headerRow = sectionRow + 1;
+    const header = rows[0] as unknown[];
+    if (header.length > 1) {
+      summarySheet['!merges'] = [
+        ...(summarySheet['!merges'] || []),
+        { s: { r: sectionRow, c: 0 }, e: { r: sectionRow, c: header.length - 1 } },
+      ];
+    }
+    for (let column = 0; column < header.length; column += 1) {
+      setCellStyle(
+        summarySheet,
+        XLSX.utils.encode_cell({ r: headerRow, c: column }),
+        {
+          font: { bold: true, color: { rgb: EXCEL_COLORS.white }, sz: 10 },
+          fill: { fgColor: { rgb: EXCEL_COLORS.navy } },
+          border: thinBorder,
+          alignment: { vertical: 'center', wrapText: true },
+        },
+      );
+
+      for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+        const cellAddress = XLSX.utils.encode_cell({
+          r: headerRow + rowIndex,
+          c: column,
+        });
+        setCellStyle(summarySheet, cellAddress, {
+          font: { color: { rgb: EXCEL_COLORS.black }, sz: 10 },
+          fill: {
+            fgColor: {
+              rgb: rowIndex % 2 === 0 ? EXCEL_COLORS.light : EXCEL_COLORS.white,
+            },
+          },
+          border: thinBorder,
+          alignment: { vertical: 'center' },
+        });
+
+        const normalizedHeader = safeString(header[column]).toLowerCase();
+        const cell = summarySheet[cellAddress];
+        if (!cell) continue;
+        if (/(revenue|average|price|total|spend|value|change)/.test(normalizedHeader)) {
+          cell.z = '#,##0.00';
+        } else if (/(share|rate)/.test(normalizedHeader)) {
+          cell.z = '0.0%';
+        } else if (/(orders|quantity|sold)/.test(normalizedHeader)) {
+          cell.z = '#,##0';
+        }
+      }
+    }
+
+    sectionRow += sectionRows.length;
+  }
+
+  autoSizeSheet(summarySheet, combinedRows, 12, 44);
+  summarySheet['!rows'] = [
+    ...(summarySheet['!rows'] || []),
+    ...Array.from({ length: combinedRows.length }, () => ({ hpt: 20 })),
   ];
 
-  summarySheet['!rows'] = [
-    { hpt: 32 },
-    { hpt: 22 },
-    { hpt: 8 },
-    { hpt: 20 },
-    { hpt: 20 },
-    { hpt: 20 },
-    { hpt: 20 },
-    { hpt: 20 },
-    { hpt: 8 },
-    { hpt: 20 },
-    { hpt: 8 },
-    { hpt: 24 },
-    { hpt: 32 },
-    { hpt: 8 },
-    { hpt: 24 },
-    { hpt: 32 },
-  ];
+  summarySheet['!rows'] = Array.from(
+    { length: combinedRows.length },
+    (_, row) => ({ hpt: row === 0 ? 32 : row === 1 ? 22 : 20 }),
+  );
 
   configurePrint(summarySheet, true);
 
@@ -1423,250 +1341,20 @@ function buildProfessionalWorkbook(
   /* DATA SHEETS                                                              */
   /* ------------------------------------------------------------------------ */
 
-  for (const [name, originalRows] of Object.entries(
-    sheets,
-  )) {
-    if (name === 'Executive Summary') continue;
-
-    const rows = originalRows as unknown[][];
-
-    if (!rows.length) continue;
-
-    const headerRow = 0;
-
-    const dataSheet = XLSX.utils.aoa_to_sheet(rows);
-
-    const columnCount = rows[0]?.length || 1;
-
-    /* Professional sheet title */
-    const title = `${reportLabel(report)} · ${name}`;
-
-    dataSheet['A1'] = {
-      t: 's',
-      v: title,
-    };
-
-    setCellStyle(dataSheet, 'A1', {
-      font: {
-        bold: true,
-        color: {
-          rgb: EXCEL_COLORS.white,
-        },
-        sz: 16,
-      },
-      fill: {
-        fgColor: {
-          rgb: EXCEL_COLORS.navy,
-        },
-      },
-      alignment: {
-        vertical: 'center',
-      },
-    });
-
-    for (let column = 1; column < columnCount; column += 1) {
-      const address = XLSX.utils.encode_cell({
-        r: 0,
-        c: column,
-      });
-
-      setCellStyle(dataSheet, address, {
-        fill: {
-          fgColor: {
-            rgb: EXCEL_COLORS.navy,
-          },
-        },
-      });
-    }
-
-    dataSheet['!merges'] = [
-      {
-        s: { r: 0, c: 0 },
-        e: { r: 0, c: columnCount - 1 },
-      },
-    ];
-
-    /* Insert blank/title area by shifting existing table down */
-    XLSX.utils.sheet_add_aoa(
-      dataSheet,
-      [
-        [],
-        [
-          'Report',
-          reportLabel(report),
-          'Period',
-          periodLabel,
-          'Generated',
-          new Date().toLocaleString(),
-        ],
-        [],
-      ],
-      {
-        origin: 'A2',
-      },
-    );
-
-    const shiftedRows = [
-      [title],
-      [],
-      [
-        'Report',
-        reportLabel(report),
-        'Period',
-        periodLabel,
-        'Generated',
-        new Date().toLocaleString(),
-      ],
-      [],
-      ...rows,
-    ];
-
-    const rebuiltSheet = XLSX.utils.aoa_to_sheet(
-      shiftedRows,
-    );
-
-    const rebuiltColumnCount =
-      Math.max(
-        ...shiftedRows.map((row) => row.length),
-        columnCount,
-      );
-
-    rebuiltSheet['!merges'] = [
-      {
-        s: { r: 0, c: 0 },
-        e: {
-          r: 0,
-          c: rebuiltColumnCount - 1,
-        },
-      },
-    ];
-
-    setCellStyle(rebuiltSheet, 'A1', {
-      font: {
-        bold: true,
-        color: {
-          rgb: EXCEL_COLORS.white,
-        },
-        sz: 16,
-      },
-      fill: {
-        fgColor: {
-          rgb: EXCEL_COLORS.navy,
-        },
-      },
-      alignment: {
-        vertical: 'center',
-      },
-    });
-
-    for (
-      let column = 1;
-      column < rebuiltColumnCount;
-      column += 1
-    ) {
-      setCellStyle(
-        rebuiltSheet,
-        XLSX.utils.encode_cell({
-          r: 0,
-          c: column,
-        }),
-        {
-          fill: {
-            fgColor: {
-              rgb: EXCEL_COLORS.navy,
-            },
-          },
-        },
-      );
-    }
-
-    /* Metadata row */
-    for (let column = 0; column < 6; column += 1) {
-      const address = XLSX.utils.encode_cell({
-        r: 2,
-        c: column,
-      });
-
-      if (!rebuiltSheet[address]) continue;
-
-      setCellStyle(rebuiltSheet, address, {
-        font: {
-          bold: column % 2 === 0,
-          color: {
-            rgb:
-              column % 2 === 0
-                ? EXCEL_COLORS.muted
-                : EXCEL_COLORS.black,
-          },
-          sz: 9,
-        },
-        fill: {
-          fgColor: {
-            rgb:
-              column % 2 === 0
-                ? EXCEL_COLORS.soft
-                : EXCEL_COLORS.light,
-          },
-        },
-        border: thinBorder,
-      });
-    }
-
-    const actualHeaderRow = 4;
-
-    styleDataSheet(
-      rebuiltSheet,
-      shiftedRows,
-      actualHeaderRow,
-    );
-
-    setNumberFormats(
-      rebuiltSheet,
-      shiftedRows,
-      actualHeaderRow,
-    );
-
-    autoSizeSheet(
-      rebuiltSheet,
-      shiftedRows,
-      12,
-      44,
-    );
-
-    rebuiltSheet['!rows'] = [
-      { hpt: 26 },
-      { hpt: 8 },
-      { hpt: 20 },
-      { hpt: 8 },
-      { hpt: 24 },
-    ];
-
-    configurePrint(rebuiltSheet, true);
-
-    const safeSheetName =
-      name.slice(0, 31);
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      rebuiltSheet,
-      safeSheetName,
-    );
-  }
-
   /* ------------------------------------------------------------------------ */
   /* WORKBOOK PROPERTIES                                                      */
   /* ------------------------------------------------------------------------ */
 
   workbook.Props = {
     Title: `${reportLabel(report)} Report`,
-    Subject: `NOVAMENU ${reportLabel(report)} export`,
-    Author: 'NOVAMENU',
+    Subject: `PARTNER ${reportLabel(report)} export`,
+    Author: 'PARTNER',
     Company: 'Novera Labs',
     CreatedDate: new Date(),
     Keywords:
-      'NOVAMENU, restaurant, analytics, reports, export',
+      'PARTNER, restaurant, analytics, reports, export',
     Comments:
-      'Generated by NOVAMENU Export Center.',
+      'Generated by PARTNER Export Center.',
   };
 
   return workbook;
@@ -1756,7 +1444,9 @@ function getFlatExportRows(
   );
 
   const preferred =
-    report === 'customers'
+    report === 'branches'
+      ? 'Branch Performance'
+      : report === 'customers'
       ? 'Customers'
       : report === 'menu'
         ? 'Menu Performance'
@@ -1789,6 +1479,7 @@ function getFlatExportRows(
 export default function ReportsExportsPage() {
   const [selectedReport, setSelectedReport] =
     useState<ReportType>('sales');
+  const [branchFeatureAllowed, setBranchFeatureAllowed] = useState(false);
 
   const [period, setPeriod] =
     useState<Period>('30d');
@@ -1811,8 +1502,56 @@ export default function ReportsExportsPage() {
   const [exportHistory, setExportHistory] =
     useState<ExportHistoryRow[]>([]);
 
+  useEffect(() => {
+    let active = true;
+    const loadBranchAccess = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+      if (!user) return;
+
+      const { data: membership } = await supabase
+        .from('restaurant_members')
+        .select('restaurant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const { data: subscription } = membership?.restaurant_id
+        ? await supabase
+            .from('restaurant_subscriptions')
+            .select('plan_code, status, trial_ends_at')
+            .eq('restaurant_id', membership.restaurant_id)
+            .maybeSingle()
+        : { data: null };
+
+      const allowed = subscriptionAllows(
+        subscription as {
+          plan_code: BillingPlan;
+          status: SubscriptionStatus;
+          trial_ends_at: string;
+        } | null,
+        'branches',
+      );
+      if (active) setBranchFeatureAllowed(allowed);
+    };
+
+    void loadBranchAccess();
+    const requestedReport = new URLSearchParams(window.location.search).get('report');
+    if (requestedReport === 'branches') {
+      startTransition(() => setSelectedReport('branches'));
+    }
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const generateExport = useCallback(
     async (nextReport = selectedReport) => {
+      if (nextReport === 'branches' && !branchFeatureAllowed) {
+        setError('Branch Management exports require the Enterprise plan.');
+        return;
+      }
+
       const pdfWindow =
         format === 'pdf'
           ? window.open('', '_blank')
@@ -1820,7 +1559,7 @@ export default function ReportsExportsPage() {
 
       if (format === 'pdf' && !pdfWindow) {
         setError(
-          'Your browser blocked the PDF window. Allow pop-ups for NOVAMENU and try again.',
+          'Your browser blocked the PDF window. Allow pop-ups for PARTNER and try again.',
         );
         return;
       }
@@ -1891,7 +1630,7 @@ export default function ReportsExportsPage() {
             .slice(0, 10);
 
         const filename =
-          `novamenu-${nextReport}-${today}`;
+          `partner-${nextReport}-${today}`;
 
         if (format === 'csv') {
           downloadProfessionalCsv(
@@ -1957,6 +1696,7 @@ export default function ReportsExportsPage() {
       customTo,
       format,
       period,
+      branchFeatureAllowed,
       selectedReport,
     ],
   );
@@ -1997,7 +1737,7 @@ export default function ReportsExportsPage() {
           >
             Generate professional restaurant
             reports in Excel, CSV, or PDF
-            format from your NOVAMENU analytics.
+            format from your PARTNER analytics.
           </p>
         </div>
 
@@ -2073,6 +1813,7 @@ export default function ReportsExportsPage() {
                             report.key,
                           )
                         }
+                        disabled={report.key === 'branches' && !branchFeatureAllowed}
                         className="flex items-center gap-3 rounded-xl border p-3 text-left transition"
                         style={{
                           borderColor:
@@ -2103,7 +1844,7 @@ export default function ReportsExportsPage() {
 
                         <div className="min-w-0">
                           <p className="text-xs font-black">
-                            {report.label}
+                            {report.label}{report.key === 'branches' && !branchFeatureAllowed ? ' · Enterprise' : ''}
                           </p>
 
                           <p
@@ -2119,7 +1860,9 @@ export default function ReportsExportsPage() {
                           </p>
                         </div>
 
-                        {selected && (
+                        {report.key === 'branches' && !branchFeatureAllowed ? (
+                          <LockKeyhole size={15} className="ml-auto shrink-0" style={{ color: 'var(--portal-text-muted)' }} />
+                        ) : selected && (
                           <CheckCircle2
                             size={15}
                             className="ml-auto shrink-0"
@@ -2438,12 +2181,37 @@ export default function ReportsExportsPage() {
             <QuickExport
               icon={Users}
               title="Customers"
-              description="Customer activity data"
+              description="Customer orders and spend"
               onClick={() =>
                 void generateExport(
                   'customers',
                 )
               }
+            />
+            <QuickExport
+              icon={ReceiptText}
+              title="Promotions"
+              description="Active offers and discount setup"
+              onClick={() => void generateExport('promotions')}
+            />
+            <QuickExport
+              icon={FileText}
+              title="Pricing"
+              description="Menu price change history"
+              onClick={() => void generateExport('pricing')}
+            />
+            <QuickExport
+              icon={RefreshCw}
+              title="Operations"
+              description="Order statuses and activity"
+              onClick={() => void generateExport('operations')}
+            />
+            <QuickExport
+              icon={GitBranch}
+              title="Branches"
+              description={branchFeatureAllowed ? 'Branch comparison and order detail' : 'Enterprise plan required'}
+              disabled={!branchFeatureAllowed}
+              onClick={() => void generateExport('branches')}
             />
           </div>
         </section>
@@ -2683,7 +2451,7 @@ export default function ReportsExportsPage() {
           <InfoCard
             icon={FileSpreadsheet}
             title="Excel"
-            description="Professional multi-sheet workbook with an executive summary, KPIs, filters, frozen headers, formatting, and print-ready layouts."
+            description="One worksheet per export, with the executive summary and all report detail sections stacked together."
           />
 
           <InfoCard
@@ -2724,14 +2492,12 @@ export default function ReportsExportsPage() {
             >
               Professional exports:
             </span>{' '}
-            Excel exports now contain a dedicated
-            executive summary, KPI section,
-            report metadata, polished data
-            tables, filters, frozen headers,
-            intelligent column sizing, number
-            formatting, and print-friendly
-            settings. CSV exports remain clean
-            and machine-readable for analysis.
+            Each export button names the report it
+            downloads. Excel files use one
+            worksheet and include the summary plus
+            every relevant detail table; CSV and
+            PDF contain the selected report&apos;s
+            primary table.
           </div>
         </div>
       </div>
@@ -2875,17 +2641,20 @@ function QuickExport({
   title,
   description,
   onClick,
+  disabled = false,
 }: {
   icon: typeof BarChart3;
   title: string;
   description: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group rounded-2xl border p-5 text-left transition"
+      disabled={disabled}
+      className="group rounded-2xl border p-5 text-left transition disabled:cursor-not-allowed disabled:opacity-55"
       style={{
         borderColor:
           'var(--portal-border)',
@@ -2906,13 +2675,9 @@ function QuickExport({
           <Icon size={18} />
         </div>
 
-        <Download
-          size={14}
-          style={{
-            color:
-              'var(--portal-text-muted)',
-          }}
-        />
+        {disabled ? <LockKeyhole size={14} style={{ color: 'var(--portal-text-muted)' }} /> : (
+          <Download size={14} style={{ color: 'var(--portal-text-muted)' }} />
+        )}
       </div>
 
       <p className="mt-5 text-xs font-black">

@@ -1662,7 +1662,7 @@ export default function PublicMenuPage() {
 
             <img
               src="/partnerlogo-icon.png"
-              alt="NOVAMENU"
+              alt="PARTNER"
               className="relative h-12 w-12 rounded-full object-cover"
             />
           </div>
@@ -2182,7 +2182,7 @@ export default function PublicMenuPage() {
             }}
           >
 
-            {/* NOVAMENU BRAND */}
+            {/* PARTNER BRAND */}
 
             <div className="flex items-center gap-3">
 

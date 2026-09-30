@@ -180,7 +180,7 @@ export async function POST(req: Request) {
 
     const { data: branch, error: branchError } = await supabaseAdmin
       .from('restaurant_branches')
-      .select('id')
+      .select('id, is_main')
       .eq('id', branchId)
       .eq('restaurant_id', restaurantId)
       .eq('is_active', true)
@@ -209,6 +209,20 @@ export async function POST(req: Request) {
     )) {
       return NextResponse.json(
         { error: 'Team Management requires an active Pro or Enterprise plan.' },
+        { status: 403 }
+      );
+    }
+
+    if (!subscriptionAllows(
+      subscription as {
+        plan_code: BillingPlan;
+        status: SubscriptionStatus;
+        trial_ends_at: string;
+      } | null,
+      'branches'
+    ) && !branch.is_main) {
+      return NextResponse.json(
+        { error: 'Non-Enterprise plans can assign team members to the main branch only.' },
         { status: 403 }
       );
     }

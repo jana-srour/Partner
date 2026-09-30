@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   BriefcaseBusiness,
   Filter,
+  Lock,
   Search,
   Users,
 } from 'lucide-react';import { supabase } from '@/lib/supabase';
@@ -102,6 +103,7 @@ export default function TeamPage() {
     useState(true);
 
   const [planAllowed, setPlanAllowed] = useState(true);
+  const [branchFeatureAllowed, setBranchFeatureAllowed] = useState(false);
   const [planCode, setPlanCode] = useState<BillingPlan | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
@@ -270,6 +272,14 @@ export default function TeamPage() {
         'team'
       );
 
+      setBranchFeatureAllowed(subscriptionAllows(
+        subscription as {
+          plan_code: BillingPlan;
+          status: SubscriptionStatus;
+          trial_ends_at: string;
+        } | null,
+        'branches'
+      ));
       setPlanAllowed(allowed);
       setPlanCode(subscription?.plan_code || null);
       setSubscriptionStatus(subscription?.status || null);
@@ -1408,7 +1418,7 @@ export default function TeamPage() {
       can_manage_qr_studio:
         position.can_manage_qr_studio ?? false,
       can_manage_branches:
-        position.can_manage_branches ?? false,
+        branchFeatureAllowed && (position.can_manage_branches ?? false),
     });
 
     setMessage(null);
@@ -1439,6 +1449,7 @@ export default function TeamPage() {
 
       const nextPermissions = {
         ...permissionValues,
+        can_manage_branches: branchFeatureAllowed && permissionValues.can_manage_branches,
       };
 
       const response = await fetch(
@@ -1476,7 +1487,7 @@ export default function TeamPage() {
       const updated =
         result.position || {
           ...editingPermissions,
-          ...permissionValues,
+          ...nextPermissions,
         };
 
       setPositions((current) =>
@@ -1592,7 +1603,7 @@ export default function TeamPage() {
         }
       }
 
-      if (memberBranchFilter !== 'all' && member.branch_id !== memberBranchFilter) {
+      if (branchFeatureAllowed && memberBranchFilter !== 'all' && member.branch_id !== memberBranchFilter) {
         return false;
       }
 
@@ -2067,7 +2078,7 @@ export default function TeamPage() {
                       </select>
                     </div>
 
-                    <div
+                    {branchFeatureAllowed && <div
                       className="flex items-center gap-2 rounded-lg border px-3"
                       style={{
                         borderColor: 'var(--portal-border)',
@@ -2087,9 +2098,9 @@ export default function TeamPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
+                    </div>}
 
-                    {(memberSearch || memberPositionFilter !== 'all' || memberBranchFilter !== 'all') && (
+                    {(memberSearch || memberPositionFilter !== 'all' || (branchFeatureAllowed && memberBranchFilter !== 'all')) && (
                       <span
                         className="text-[10px] font-semibold whitespace-nowrap"
                         style={{
@@ -2146,12 +2157,12 @@ export default function TeamPage() {
                             </span>
                           </th>
 
-                          <th
+                          {branchFeatureAllowed && <th
                             className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em]"
                             style={{ color: 'color-mix(in srgb, var(--portal-text) 55%, transparent)' }}
                           >
                             Branch
-                          </th>
+                          </th>}
 
                           {/* Added */}
                           <th
@@ -2307,13 +2318,13 @@ export default function TeamPage() {
                                   </span>
                                 </td>
 
-                                <td className="px-4 py-4">
+                                {branchFeatureAllowed && <td className="px-4 py-4">
                                   <span className="text-xs">
                                     {member.role.toLowerCase().trim() === 'owner' && !member.branch_id
                                       ? 'All branches'
                                       : member.branch_name || 'Unassigned'}
                                   </span>
-                                </td>
+                                </td>}
 
                                 {/* Added */}
                                 <td className="px-4 py-4">
@@ -2605,7 +2616,7 @@ export default function TeamPage() {
                       </select>
                     </div>
 
-                    <div>
+                    {branchFeatureAllowed ? <div>
                       <label
                         className="mb-2 block text-[10px] uppercase tracking-[0.14em] font-black"
                         style={{ color: 'var(--portal-text)', opacity: 0.6 }}
@@ -2630,7 +2641,11 @@ export default function TeamPage() {
                           <option key={branch.id} value={branch.id}>{branch.name}</option>
                         ))}
                       </select>
-                    </div>
+                    </div> : (
+                      <p className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'var(--portal-text)', opacity: 0.6 }}>
+                        <Lock className="h-3.5 w-3.5" /> New members are assigned to the main branch. Branch assignment is an Enterprise feature.
+                      </p>
+                    )}
 
                     <button
                       type="submit"
@@ -3164,7 +3179,7 @@ export default function TeamPage() {
                   </div>
                 </section>
 
-                <section className="border-t pt-6" style={{ borderColor: 'var(--portal-border)' }}>
+                {branchFeatureAllowed && <section className="border-t pt-6" style={{ borderColor: 'var(--portal-border)' }}>
                   <div className="mb-3">
                     <p className="text-[10px] uppercase tracking-[0.14em] font-black" style={{ color: 'var(--portal-accent)' }}>
                       Branch Assignment
@@ -3211,7 +3226,7 @@ export default function TeamPage() {
                   >
                     {savingBranch ? 'Saving...' : 'Save Branch'}
                   </button>
-                </section>
+                </section>}
 
                 {/* SECURITY */}
 
@@ -3958,15 +3973,21 @@ export default function TeamPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={permissionValues.can_manage_branches}
+                      checked={branchFeatureAllowed && permissionValues.can_manage_branches}
+                      disabled={!branchFeatureAllowed}
                       onChange={(event) => setPermissionValues((previous) => ({
                         ...previous,
                         can_manage_branches: event.target.checked,
                       }))}
-                      className="h-4 w-4 shrink-0 cursor-pointer"
+                      className="h-4 w-4 shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                       style={{ accentColor: 'var(--portal-accent)' }}
                     />
                   </label>
+                  {!branchFeatureAllowed && (
+                    <p className="mt-2 flex items-center gap-2 text-xs" style={{ color: 'var(--portal-text)', opacity: 0.55 }}>
+                      <Lock className="h-3.5 w-3.5" /> Enterprise plan required.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -4013,27 +4034,24 @@ export default function TeamPage() {
             className="mx-auto flex max-w-[1400px] items-center justify-between border-t pt-5"
             style={{ borderColor: 'var(--portal-border)' }}
           >
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex h-6 w-6 items-center justify-center rounded-md border text-[9px] font-black"
-                style={{
-                  background: 'var(--portal-accent-soft)',
-                  borderColor: 'var(--portal-border)',
-                  color: 'var(--portal-accent)',
-                }}
-              >
-                N
+            <div className="py-10 text-center">
+
+              <div className="flex items-center justify-center gap-2">
+
+                <div className="w-5 h-5 overflow-hidden rounded-md">
+                  <img
+                    src="/partnerlogo-icon.png"
+                    alt="Partner"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
+                  Partner
+                </span>
+
               </div>
 
-              <span
-                className="text-[9px] font-black tracking-[0.16em]"
-                style={{
-                  color: 'var(--portal-text)',
-                  opacity: 0.55,
-                }}
-              >
-                Partner
-              </span>
             </div>
 
             <p
@@ -4043,7 +4061,7 @@ export default function TeamPage() {
                 opacity: 0.4,
               }}
             >
-              Team workspace
+              Team Workspace
             </p>
           </div>
         </footer>
@@ -4085,7 +4103,7 @@ export default function TeamPage() {
 
 <style jsx global>{`
   /* ===================================================== */
-  /* NOVAMENU BUTTON SYSTEM */
+  /* PARTNER BUTTON SYSTEM */
   /* ===================================================== */
 
   .nova-button,

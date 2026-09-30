@@ -1900,7 +1900,7 @@ export default function PrintersSettingsPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="www.novamenu.com"
+                            placeholder="www.partner.com"
                             className="mt-1.5 w-full rounded-xl border px-3 py-2.5 text-xs outline-none"
                             style={{
                               background:
@@ -2807,7 +2807,7 @@ export default function PrintersSettingsPage() {
                               e.target.value
                             )
                           }
-                          placeholder="Thank you for choosing NovaMenu!"
+                          placeholder="Thank you for choosing PARTNER!"
                           className="mt-1.5 w-full rounded-xl border p-3 text-xs outline-none"
                           style={{
                             background:
@@ -2893,7 +2893,7 @@ export default function PrintersSettingsPage() {
                                   e.target.value
                                 )
                               }
-                              placeholder="https://novamenu.com"
+                              placeholder="https://partner.com"
                               className="mt-1.5 w-full rounded-xl border px-3 py-2.5 text-xs outline-none"
                               style={{
                                 background:

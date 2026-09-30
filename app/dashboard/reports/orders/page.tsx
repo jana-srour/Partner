@@ -1067,7 +1067,7 @@ export default function OrdersReportPage() {
 
     link.href = url;
 
-    link.download = `novamenu-orders-${period
+    link.download = `partner-orders-${period
       .replaceAll(' ', '-')
       .toLowerCase()}.csv`;
 

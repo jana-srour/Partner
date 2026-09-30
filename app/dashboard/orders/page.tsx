@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   DollarSign,
+  Lock,
   MapPin,
   Pencil,
   Phone,
@@ -204,10 +205,13 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState<'All' | OrderStatus>('All');
   const [locationFilter, setLocationFilter] = useState<'All' | OrderLocation>('All');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [branchFilter, setBranchFilter] = useState('all');
+  const [selectedDay, setSelectedDay] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [planAllowed, setPlanAllowed] = useState(true);
+  const [branchFeatureAllowed, setBranchFeatureAllowed] = useState(false);
 
   // Printer & Receipt State
   const [configuredPrinter, setConfiguredPrinter] = useState<SavedPrinter | null>(null);
@@ -351,6 +355,14 @@ export default function OrdersPage() {
 
       if (!active) return;
 
+      setBranchFeatureAllowed(subscriptionAllows(
+        subscription as {
+          plan_code: BillingPlan;
+          status: SubscriptionStatus;
+          trial_ends_at: string;
+        } | null,
+        'branches'
+      ));
       setPlanAllowed(allowed);
 
       if (!allowed) {
@@ -703,13 +715,26 @@ export default function OrdersPage() {
     return orders
       .filter((order) => filter === 'All' || order.status === filter)
       .filter((order) => locationFilter === 'All' || order.location === locationFilter)
-      .filter((order) => dateCutoff === null || order.createdAtTimestamp >= dateCutoff)
+      .filter((order) => branchFilter === 'all' || (order.branchId || UNASSIGNED_BRANCH_SCOPE_ID) === branchFilter)
+      .filter((order) => selectedDay
+        ? restaurantDayKey(new Date(order.createdAtTimestamp), restaurantDayStart) === selectedDay
+        : dateCutoff === null || order.createdAtTimestamp >= dateCutoff)
       .sort((first, second) =>
         sortOption === 'newest'
           ? second.createdAtTimestamp - first.createdAtTimestamp
           : first.createdAtTimestamp - second.createdAtTimestamp
       );
-  }, [dateFilter, filter, locationFilter, orders, restaurantDayStart, sortOption]);
+  }, [branchFilter, dateFilter, filter, locationFilter, orders, restaurantDayStart, selectedDay, sortOption]);
+
+  const branchOptions = useMemo(() => {
+    const branches = new Map<string, string>();
+
+    orders.forEach((order) => {
+      branches.set(order.branchId || UNASSIGNED_BRANCH_SCOPE_ID, order.branchName);
+    });
+
+    return [...branches.entries()].sort((first, second) => first[1].localeCompare(second[1]));
+  }, [orders]);
 
   // Group orders by Calendar Date with relative labels (Today, Yesterday, etc.)
   const groupedOrders = useMemo<DateGroup[]>(() => {
@@ -976,6 +1001,34 @@ export default function OrdersPage() {
 
             {/* Dropdown Filters */}
             <div className="flex flex-wrap gap-3 pt-3 border-t" style={{ borderColor: 'var(--portal-border)' }}>
+              {branchFeatureAllowed ? (
+                <label
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em]"
+                  style={{ color: 'var(--portal-text)' }}
+                >
+                  Branch
+                  <select
+                    value={branchFilter}
+                    onChange={(event) => setBranchFilter(event.target.value)}
+                    className="rounded-xl border px-3 py-2 text-xs font-bold normal-case tracking-normal outline-none"
+                    style={{
+                      borderColor: 'var(--portal-border)',
+                      background: 'var(--portal-background)',
+                      color: 'var(--portal-text)',
+                    }}
+                  >
+                    <option value="all">All branches</option>
+                    {branchOptions.map(([id, name]) => (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]" style={{ borderColor: 'var(--portal-border)', color: 'var(--portal-text)' }}>
+                  <Lock className="h-3.5 w-3.5" /> Enterprise branch filter
+                </span>
+              )}
+
               <label
                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em]"
                 style={{ color: 'var(--portal-text)' }}
@@ -997,6 +1050,27 @@ export default function OrdersPage() {
                   <option value="Restaurant">Inside restaurant</option>
                   <option value="Delivery">Delivery</option>
                 </select>
+              </label>
+
+              <label
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em]"
+                style={{ color: 'var(--portal-text)' }}
+              >
+                Specific day
+                <input
+                  type="date"
+                  value={selectedDay}
+                  onChange={(event) => {
+                    setSelectedDay(event.target.value);
+                    setDateFilter('all');
+                  }}
+                  className="rounded-xl border px-3 py-2 text-xs font-bold normal-case tracking-normal outline-none"
+                  style={{
+                    borderColor: 'var(--portal-border)',
+                    background: 'var(--portal-background)',
+                    color: 'var(--portal-text)',
+                  }}
+                />
               </label>
 
               <label
@@ -1186,9 +1260,11 @@ export default function OrdersPage() {
                                     : `${order.customer} · Delivery`}{' '}
                                   · {order.createdAt}
                                 </p>
-                                <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--portal-accent)' }}>
-                                  Branch: {order.branchName} · {order.branchCode || order.branchId?.slice(0, 8) || 'Unassigned'}
-                                </p>
+                                {branchFeatureAllowed && (
+                                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--portal-accent)' }}>
+                                    Branch: {order.branchName} · {order.branchCode || order.branchId?.slice(0, 8) || 'Unassigned'}
+                                  </p>
+                                )}
 
                                 {order.location === 'Delivery' ? (
                                   <div className="mt-3 grid max-w-xl gap-2 sm:grid-cols-3">
@@ -1551,6 +1627,47 @@ export default function OrdersPage() {
           </section>
         </div>
       )}
+
+      {/* FOOTER */}
+
+        <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+          <div
+            className="mx-auto flex max-w-[1400px] items-center justify-between border-t pt-5"
+            style={{ borderColor: 'var(--portal-border)' }}
+          >
+            <div className="py-10 text-center">
+
+              <div className="flex items-center justify-center gap-2">
+
+                <div className="w-5 h-5 overflow-hidden rounded-md">
+                  <img
+                    src="/partnerlogo-icon.png"
+                    alt="Partner"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
+                  Partner
+                </span>
+
+              </div>
+
+            </div>
+
+            <p
+              className="text-[9px]"
+              style={{
+                color: 'var(--portal-text)',
+                opacity: 0.4,
+              }}
+            >
+              Orders Workspace
+            </p>
+          </div>
+        </footer>
+
     </div>
+    
   );
 }

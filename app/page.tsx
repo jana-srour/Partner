@@ -1,17 +1,25 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   BarChart3,
+  Building2,
   Check,
   ChevronRight,
+  CircleHelp,
+  ClipboardList,
   Globe2,
+  GitBranch,
   LayoutDashboard,
   Menu,
+  Printer,
   QrCode,
   Sparkles,
+  UsersRound,
   UtensilsCrossed,
   Zap,
 } from "lucide-react";
+import LandingPricing from "@/components/landing-pricing";
 
 export default function Home() {
   return (
@@ -46,10 +54,12 @@ export default function Home() {
                 boxShadow: "0 0 30px rgba(176,141,87,0.18)",
               }}
             >
-              <img
+              <Image
                 src="/partnerlogo-icon.png"
                 alt="Partner"
-                className="h-full w-full object-cover"
+                width={40}
+                height={40}
+                className="h-full w-full object-contain"
               />
 
               <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[#B08D57] shadow-[0_0_8px_#B08D57]" />
@@ -153,7 +163,7 @@ export default function Home() {
                 href="/signup"
                 className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[#B08D57] px-7 py-4 text-sm font-black text-[#0A0908] shadow-[0_0_45px_rgba(176,141,87,0.18)] transition hover:bg-[#C4A66F] hover:shadow-[0_0_55px_rgba(176,141,87,0.28)] sm:w-auto"
               >
-                Start your restaurant
+                Start your 7-day trial
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
 
@@ -161,9 +171,13 @@ export default function Home() {
                 href="/login"
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-7 py-4 text-sm font-bold text-white/75 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white sm:w-auto"
               >
-                Sign in to NOVAMENU
+                Sign in to PARTNER
               </Link>
             </div>
+
+            <p className="mt-4 text-xs text-white/35">
+              Explore the full platform for seven days. Choose a paid plan later from Billing.
+            </p>
 
             {/* TRUST */}
 
@@ -343,14 +357,14 @@ export default function Home() {
 
             <p className="max-w-xl text-sm leading-7 text-white/40 lg:justify-self-end">
               From the moment a guest scans your QR code to the moment an
-              order reaches your team, NOVAMENU connects the experience into
+              order reaches your team, PARTNER connects the experience into
               one elegant system.
             </p>
           </div>
 
           <div
             id="features"
-            className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
           >
             {[
               {
@@ -372,6 +386,26 @@ export default function Home() {
                 icon: Zap,
                 title: "Ordering",
                 text: "Make customer ordering fast, simple, and connected.",
+              },
+              {
+                icon: ClipboardList,
+                title: "Order Management",
+                text: "Track incoming orders, update preparation status, and keep service moving.",
+              },
+              {
+                icon: Printer,
+                title: "Kitchen Printing",
+                text: "Send receipts to supported printers and configure your print workflow.",
+              },
+              {
+                icon: UsersRound,
+                title: "Team & Permissions",
+                text: "Give staff the workspace access and responsibilities they need.",
+              },
+              {
+                icon: GitBranch,
+                title: "Multi-branch Operations",
+                text: "Manage branch menus, orders, staff assignments, and comparisons on Enterprise.",
               },
             ].map((feature) => {
               const Icon = feature.icon;
@@ -398,6 +432,68 @@ export default function Home() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="relative z-10 border-y border-white/[0.06] bg-white/[0.015]">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr]">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#C9A76A]">From setup to service</p>
+              <h2 className="mt-4 text-3xl font-black sm:text-4xl">One connected restaurant workflow.</h2>
+              <p className="mt-4 max-w-md text-sm leading-7 text-white/50">
+                Put your menu online, let guests reach it from a QR code, and manage the orders from the same workspace.
+              </p>
+            </div>
+
+            <ol className="grid gap-0 sm:grid-cols-3">
+              {[
+                {
+                  number: "01",
+                  icon: UtensilsCrossed,
+                  title: "Build your menu",
+                  text: "Add categories, items, prices, options, photos, and availability from one editor.",
+                },
+                {
+                  number: "02",
+                  icon: QrCode,
+                  title: "Share with guests",
+                  text: "Publish your restaurant menu and give guests a quick way to open it on their phones.",
+                },
+                {
+                  number: "03",
+                  icon: LayoutDashboard,
+                  title: "Run the day",
+                  text: "Follow orders, update statuses, print receipts, and review performance in your dashboard.",
+                },
+              ].map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <li key={step.number} className={`border-t border-white/15 py-5 sm:px-5 ${index > 0 ? "sm:border-l" : "sm:pl-0"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black tracking-[0.2em] text-[#C9A76A]">{step.number}</span>
+                      <Icon className="h-4 w-4 text-white/45" />
+                    </div>
+                    <h3 className="mt-7 text-sm font-bold">{step.title}</h3>
+                    <p className="mt-2 text-xs leading-6 text-white/45">{step.text}</p>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A76A]" />
+              <p className="max-w-3xl text-xs leading-6 text-white/45">
+                Growing to multiple locations? Enterprise adds branch-aware menu availability, order views, staff assignment, and branch performance reports.
+              </p>
+            </div>
+            <a href="#pricing" className="inline-flex shrink-0 items-center gap-2 text-xs font-bold text-[#C9A76A] hover:text-[#E1C488]">
+              Compare plans <ArrowRight className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
       </section>
@@ -447,11 +543,54 @@ export default function Home() {
         </div>
       </section>
 
+      <LandingPricing />
+
+      {/* FAQ */}
+      <section className="relative z-10">
+        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-20 sm:px-8 lg:grid-cols-[0.7fr_1.3fr] lg:py-24">
+          <div>
+            <div className="flex items-center gap-2 text-[#C9A76A]">
+              <CircleHelp className="h-4 w-4" />
+              <p className="text-[10px] font-black uppercase tracking-[0.24em]">Good to know</p>
+            </div>
+            <h2 className="mt-4 text-3xl font-black">A few quick answers.</h2>
+          </div>
+          <div className="divide-y divide-white/10 border-y border-white/10">
+            {[
+              {
+                question: "Can I try the platform before choosing a paid plan?",
+                answer: "Yes. New restaurants start with a seven-day trial. Your account is created first; you can review and choose a plan from Billing in the workspace.",
+              },
+              {
+                question: "Can I change plans later?",
+                answer: "Plan changes are available from Billing. Monthly and annual billing options are supported, and subscription management is handled through Paddle.",
+              },
+              {
+                question: "Which plan supports more than one location?",
+                answer: "Enterprise includes Branch Management and the branch-aware menu, order, staff, and reporting features.",
+              },
+              {
+                question: "Does every staff member need an account?",
+                answer: "Team access is included with Pro for up to three workspace accounts, including the owner. Enterprise supports unlimited accounts.",
+              },
+            ].map((item) => (
+              <details key={item.question} className="group py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold marker:hidden">
+                  {item.question}
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#C9A76A] transition-transform group-open:rotate-90" />
+                </summary>
+                <p className="mt-3 max-w-2xl text-xs leading-6 text-white/50">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ========================================================= */}
       {/* CTA */}
       {/* ========================================================= */}
 
-      <section id="pricing" className="relative z-10">
+      <section className="relative z-10">
         <div className="mx-auto max-w-5xl px-5 pb-28 sm:px-8 lg:pb-36">
           <div className="relative overflow-hidden rounded-[32px] border border-[#B08D57]/20 bg-[#11100D] px-6 py-16 text-center shadow-[0_30px_100px_rgba(0,0,0,0.45)] sm:px-12">
             <div className="absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#B08D57]/15 blur-[90px]" />
@@ -468,7 +607,7 @@ export default function Home() {
               </h2>
 
               <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-white/40">
-                Create your NOVAMENU workspace and start building a restaurant
+                Create your PARTNER workspace and start building a restaurant
                 experience your guests will remember.
               </p>
 
@@ -501,10 +640,12 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-8 sm:px-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full">
-              <img
+              <Image
                 src="/partnerlogo-icon.png"
-                alt="NOVAMENU"
-                className="h-full w-full object-cover"
+                alt="PARTNER"
+                width={28}
+                height={28}
+                className="h-full w-full object-contain"
               />
             </div>
 

@@ -809,7 +809,7 @@ export default function PricingReportPage() {
       document.createElement('a');
 
     anchor.href = url;
-    anchor.download = `novamenu-pricing-report-${period}.csv`;
+    anchor.download = `partner-pricing-report-${period}.csv`;
 
     document.body.appendChild(anchor);
     anchor.click();
@@ -1226,7 +1226,7 @@ export default function PricingReportPage() {
                   }}
                 >
                   Actual pricing history recorded by
-                  NOVAMENU.
+                  PARTNER.
                 </p>
               </div>
 

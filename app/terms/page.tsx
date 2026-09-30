@@ -69,7 +69,7 @@ export default function TermsOfServicePage() {
             </h2>
             <p>
               Restaurants are responsible for the information and content they
-              publish through NOVAMENU, including menus, prices, descriptions,
+              publish through PARTNER, including menus, prices, descriptions,
               images, contact information, and ordering information.
             </p>
             <p className="mt-3">
@@ -83,9 +83,9 @@ export default function TermsOfServicePage() {
               5. Subscriptions and Payments
             </h2>
             <p>
-              Certain NOVAMENU features require a paid subscription. Available
+              Certain PARTNER features require a paid subscription. Available
               plans, prices, billing intervals, and included features are
-              displayed on the NOVAMENU pricing or billing page.
+              displayed on the PARTNER pricing or billing page.
             </p>
             <p className="mt-3">
               Payments are processed by our third-party payment provider.
@@ -99,7 +99,7 @@ export default function TermsOfServicePage() {
               6. Free Trials
             </h2>
             <p>
-              NOVAMENU may offer a free trial for eligible customers. Trial
+              PARTNER may offer a free trial for eligible customers. Trial
               duration and conditions may be displayed during registration or
               checkout. When a trial ends, continued use of paid features may
               require an active subscription.
@@ -111,7 +111,7 @@ export default function TermsOfServicePage() {
               7. Acceptable Use
             </h2>
             <p>
-              You agree not to misuse NOVAMENU, interfere with its operation,
+              You agree not to misuse PARTNER, interfere with its operation,
               attempt to gain unauthorized access, distribute malicious code,
               or use the service for unlawful purposes.
             </p>
@@ -122,7 +122,7 @@ export default function TermsOfServicePage() {
               8. Service Availability
             </h2>
             <p>
-              We aim to keep NOVAMENU available and reliable, but we do not
+              We aim to keep PARTNER available and reliable, but we do not
               guarantee uninterrupted or error-free operation. The service may
               occasionally be unavailable because of maintenance, updates,
               technical issues, or circumstances beyond our reasonable control.
@@ -134,12 +134,12 @@ export default function TermsOfServicePage() {
               9. Intellectual Property
             </h2>
             <p>
-              NOVAMENU, its software, branding, visual design, and related
+              PARTNER, its software, branding, visual design, and related
               technology are owned by or licensed to Novera Labs and are
               protected by applicable intellectual property laws.
             </p>
             <p className="mt-3">
-              Customers retain ownership of content they provide to NOVAMENU,
+              Customers retain ownership of content they provide to PARTNER,
               subject to the rights necessary for us to operate and provide
               the service.
             </p>
@@ -150,7 +150,7 @@ export default function TermsOfServicePage() {
               10. Termination
             </h2>
             <p>
-              You may stop using NOVAMENU at any time. We may suspend or
+              You may stop using PARTNER at any time. We may suspend or
               terminate access when reasonably necessary, including in cases
               of serious violations of these Terms, unlawful activity, abuse
               of the service, or non-payment.
@@ -162,7 +162,7 @@ export default function TermsOfServicePage() {
               11. Disclaimer
             </h2>
             <p>
-              NOVAMENU is provided on an “as available” and “as is” basis to
+              PARTNER is provided on an “as available” and “as is” basis to
               the extent permitted by applicable law. We do not guarantee that
               the service will meet every specific business requirement or
               operate without interruption or errors.
@@ -177,7 +177,7 @@ export default function TermsOfServicePage() {
               To the maximum extent permitted by applicable law, Novera Labs
               will not be liable for indirect, incidental, special,
               consequential, or similar damages arising from the use of or
-              inability to use NOVAMENU.
+              inability to use PARTNER.
             </p>
           </section>
 
@@ -188,7 +188,7 @@ export default function TermsOfServicePage() {
             <p>
               We may update these Terms of Service from time to time. Updated
               terms will be published on this page with a revised effective
-              date. Continued use of NOVAMENU after an update constitutes
+              date. Continued use of PARTNER after an update constitutes
               acceptance of the revised terms, subject to applicable law.
             </p>
           </section>

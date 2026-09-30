@@ -25,7 +25,7 @@ export type DiscoveredPrinter = SavedPrinter & {
   status?: 'online' | 'ready' | 'paired';
 };
 
-export const PRINTER_STORAGE_KEY = 'novamenu_printer_settings';
+export const PRINTER_STORAGE_KEY = 'partner_printer_settings';
 
 export const defaultPrinter: SavedPrinter = {
   name: 'System / Chrome Print Driver',

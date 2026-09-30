@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { canManageTeam } from '@/lib/team-permissions';
+import {
+  subscriptionAllows,
+  type BillingPlan,
+  type SubscriptionStatus,
+} from '@/lib/billing/plans';
 
 export async function POST(request: Request) {
   try {
@@ -51,6 +56,26 @@ export async function POST(request: Request) {
 
     if (!requester || !await canManageTeam(admin, authData.user.id, restaurantId)) {
       return NextResponse.json({ error: 'You do not have permission to manage team members.' }, { status: 403 });
+    }
+
+    const { data: subscription } = await admin
+      .from('restaurant_subscriptions')
+      .select('plan_code, status, trial_ends_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+
+    if (!subscriptionAllows(
+      subscription as {
+        plan_code: BillingPlan;
+        status: SubscriptionStatus;
+        trial_ends_at: string;
+      } | null,
+      'branches'
+    )) {
+      return NextResponse.json(
+        { error: 'Branch reassignment requires Enterprise Branch Management.' },
+        { status: 403 }
+      );
     }
 
     const { data: target } = await admin

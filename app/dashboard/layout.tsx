@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -800,12 +801,18 @@ export default function DashboardLayout({
         <Link href="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-3">
 
 <div
-  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl p-1.5"
+  className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-[#C9A76A]/30 shadow-[0_0_35px_rgba(201,167,106,0.12)]"
   style={{
-    background: theme.portal_background,
-    border: `1px solid ${theme.portal_border}`,
+    background: '#08090C',
   }}
 >
+  <Image
+    src="/partnerlogo-icon.png"
+    alt="Partner"
+    width={36}
+    height={36}
+    className="h-full w-full object-contain"
+  />
 </div>
           <div>
 <div
@@ -859,15 +866,16 @@ export default function DashboardLayout({
           <Link href="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-3">
 
             <div
-              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl p-1.5"
+              className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[#C9A76A]/30 shadow-[0_0_35px_rgba(201,167,106,0.12)]"
               style={{
-                background: theme.portal_background,
-                border: `1px solid ${theme.portal_border}`,
+                background: '#08090C',
               }}
             >
-              <img
+              <Image
                 src="/partnerlogo-icon.png"
                 alt="Partner"
+                width={40}
+                height={40}
                 className="h-full w-full object-contain"
               />
             </div>
@@ -907,7 +915,7 @@ export default function DashboardLayout({
             <div className="p-4">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl font-black shadow-sm"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#C9A76A]/30 font-black shadow-[0_0_35px_rgba(201,167,106,0.12)]"
                   style={{
                     background: restaurant?.logo_url
                       ? theme.portal_surface
@@ -916,10 +924,13 @@ export default function DashboardLayout({
                   }}
                 >
                   {restaurant?.logo_url ? (
-                    <img
+                    <Image
                       src={restaurant.logo_url}
                       alt={`${restaurant.name} logo`}
-                      className="h-full w-full object-cover"
+                      width={48}
+                      height={48}
+                      unoptimized
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     restaurant?.name?.charAt(0).toUpperCase() || 'N'
@@ -1156,7 +1167,7 @@ export default function DashboardLayout({
                 <div className="p-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl font-black shadow-sm"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#C9A76A]/30 font-black shadow-[0_0_35px_rgba(201,167,106,0.12)]"
                       style={{
                         background: restaurant?.logo_url
                           ? theme.portal_surface
@@ -1165,10 +1176,13 @@ export default function DashboardLayout({
                       }}
                     >
                       {restaurant?.logo_url ? (
-                        <img
+                        <Image
                           src={restaurant.logo_url}
                           alt={`${restaurant.name} logo`}
-                          className="h-full w-full object-cover"
+                          width={48}
+                          height={48}
+                          unoptimized
+                          className="h-full w-full object-contain"
                         />
                       ) : (
                         restaurant?.name?.charAt(0).toUpperCase() || 'N'

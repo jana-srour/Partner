@@ -96,7 +96,7 @@ export const defaultReceiptTemplate: ReceiptTemplateConfig = {
   address: '100 Gourmet Plaza, Downtown',
   phone: '+1 (555) 019-2834',
   taxNumber: 'TAX ID: US-8829104',
-  website: 'www.novamenu.com',
+  website: 'www.partner.com',
   showHeaderLogo: true,
   headerStarsText: '★ ★ ★',
   headerAlignment: 'center',
@@ -140,7 +140,7 @@ export const defaultReceiptTemplate: ReceiptTemplateConfig = {
   showWifiInfo: true,
   showBarcode: true,
   showQrCode: true,
-  qrCodeData: 'https://novamenu.com',
+  qrCodeData: 'https://partner.com',
   qrCodeLabel: 'Scan to View Digital Menu & Reorder',
   footerAlignment: 'center',
 
@@ -258,7 +258,7 @@ export const starEmblemPresets = [
   '★ ★ ★',
   '✦ ✦ ✦',
   '★★★★★',
-  '★★★ NOVAMENU ★★★',
+  '★★★ PARTNER ★★★',
   '☕ ☕ ☕',
   '🍴 🍴 🍴',
   '✨ ✨ ✨',
@@ -339,7 +339,7 @@ export const receiptPresets: Record<
   },
 };
 
-export const RECEIPT_STORAGE_KEY = 'novamenu_receipt_template';
+export const RECEIPT_STORAGE_KEY = 'partner_receipt_template';
 
 export function loadReceiptTemplate(): ReceiptTemplateConfig {
   if (typeof window === 'undefined') return defaultReceiptTemplate;

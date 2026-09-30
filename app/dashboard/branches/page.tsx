@@ -1298,6 +1298,46 @@ export default function BranchesPage() {
           </div>
         </div>
       )}
+
+      {/* FOOTER */}
+
+        <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+          <div
+            className="mx-auto flex max-w-[1400px] items-center justify-between border-t pt-5"
+            style={{ borderColor: 'var(--portal-border)' }}
+          >
+            <div className="py-10 text-center">
+
+              <div className="flex items-center justify-center gap-2">
+
+                <div className="w-5 h-5 overflow-hidden rounded-md">
+                  <img
+                    src="/partnerlogo-icon.png"
+                    alt="Partner"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
+                  Partner
+                </span>
+
+              </div>
+
+            </div>
+
+            <p
+              className="text-[9px]"
+              style={{
+                color: 'var(--portal-text)',
+                opacity: 0.4,
+              }}
+            >
+              Branches Workspace
+            </p>
+          </div>
+        </footer>
+
     </div>
   );
 }

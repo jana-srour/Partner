@@ -440,7 +440,7 @@ export default function SignUpPage() {
 
 
               <p className="mt-7 text-sm xl:text-base leading-7 text-white/40 max-w-lg">
-                Create your NOVAMENU workspace and get seven days of full access
+                Create your PARTNER workspace and get seven days of full access
                 to explore the platform, build your menu and start running your
                 restaurant operations.
               </p>
@@ -468,7 +468,7 @@ export default function SignUpPage() {
                 <SetupStep
                   number="03"
                   title="Go live"
-                  description="Connect your customers to NOVAMENU."
+                  description="Connect your customers to PARTNER."
                 />
 
               </div>
@@ -935,7 +935,7 @@ export default function SignUpPage() {
                     <SignupSection
                       number="03"
                       title="Owner account"
-                      description="These credentials will be used to access your NOVAMENU workspace."
+                      description="These credentials will be used to access your PARTNER workspace."
                     />
 
                   </div>
@@ -1222,7 +1222,7 @@ export default function SignUpPage() {
                   <div className="text-center">
 
                     <p className="text-[10px] text-white/25">
-                      Already have a NOVAMENU account?
+                      Already have a PARTNER account?
                     </p>
 
                     <button
@@ -1302,7 +1302,7 @@ export default function SignUpPage() {
                 >
                   <img
                     src="/partnerlogo-icon.png"
-                    alt="NOVAMENU"
+                    alt="PARTNER"
                     className="h-full w-full object-cover"
                   />
                 </div>

@@ -42,7 +42,7 @@ export async function deleteRestaurantCompletely(
   /*
    * Remove restaurant storage files.
    *
-   * NOVAMENU currently uses the menu-images bucket.
+   * PARTNER currently uses the menu-images bucket.
    * Files are searched recursively under the restaurant ID.
    */
   try {

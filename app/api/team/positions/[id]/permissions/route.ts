@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { canManageTeam } from '@/lib/team-permissions';
+import {
+  subscriptionAllows,
+  type BillingPlan,
+  type SubscriptionStatus,
+} from '@/lib/billing/plans';
 
 export async function GET(
   req: Request,
@@ -369,6 +374,21 @@ export async function PATCH(
       );
     }
 
+    const { data: subscription } = await supabaseAdmin
+      .from('restaurant_subscriptions')
+      .select('plan_code, status, trial_ends_at')
+      .eq('restaurant_id', position.restaurant_id)
+      .maybeSingle();
+
+    const branchFeatureAllowed = subscriptionAllows(
+      subscription as {
+        plan_code: BillingPlan;
+        status: SubscriptionStatus;
+        trial_ends_at: string;
+      } | null,
+      'branches'
+    );
+
     // =========================================================
     // READ BODY
     // =========================================================
@@ -417,7 +437,7 @@ export async function PATCH(
         ),
 
       can_manage_branches:
-        Boolean(
+        branchFeatureAllowed && Boolean(
           body?.can_manage_branches
         ),
     };

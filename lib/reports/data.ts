@@ -56,6 +56,14 @@ export type ReportOrder = {
   created_at: string;
 };
 
+export type ReportBranch = {
+  id: string;
+  name: string;
+  code: string | null;
+  is_main: boolean;
+  is_active: boolean;
+};
+
 export type ReportOrderItem = {
   id: string;
   order_id: string;
@@ -113,6 +121,7 @@ export type ReportsData = {
   categories: ReportCategory[];
   menuItems: ReportMenuItem[];
   orders: ReportOrder[];
+  branches: ReportBranch[];
   orderItems: ReportOrderItem[];
   discounts: ReportDiscount[];
   restaurantPricingHistory: ReportPricingHistory[];
@@ -222,6 +231,20 @@ export async function getReportsData(
     );
   }
 
+  let branchesQuery = supabase
+    .from('restaurant_branches')
+    .select('id, name, code, is_main, is_active')
+    .eq('restaurant_id', restaurantId)
+    .order('is_main', { ascending: false })
+    .order('name', { ascending: true });
+
+  if (scope && !isAllBranchOwner(scope)) {
+    branchesQuery = branchesQuery.eq(
+      'id',
+      scope.branchId || UNASSIGNED_BRANCH_SCOPE_ID
+    );
+  }
+
   /*
    * Load the restaurant/menu information and
    * orders independently.
@@ -234,6 +257,7 @@ export async function getReportsData(
     categoriesResult,
     menuItemsResult,
     ordersResult,
+    branchesResult,
     discountsResult,
     restaurantPricingHistoryResult,
     menuPricingHistoryResult,
@@ -289,6 +313,8 @@ export async function getReportsData(
       }),
 
     applyDateRange(ordersQuery, range),
+
+    branchesQuery,
 
     supabase
       .from('discounts')
@@ -369,6 +395,7 @@ export async function getReportsData(
     categoriesResult.error ||
     menuItemsResult.error ||
     ordersResult.error ||
+    branchesResult.error ||
     discountsResult.error ||
     restaurantPricingHistoryResult.error ||
     menuPricingHistoryResult.error;
@@ -505,6 +532,9 @@ export async function getReportsData(
         []) as ReportMenuItem[],
 
     orders,
+
+    branches:
+      (branchesResult.data || []) as ReportBranch[],
 
     orderItems,
 

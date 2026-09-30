@@ -611,7 +611,7 @@ export default function QRStudioPage() {
     typeof window !== 'undefined' &&
     restaurantSlug
       ? `${window.location.origin}/menu/${restaurantSlug}`
-      : `https://novamenu.app/menu/${restaurantSlug}`;
+      : `https://partner.app/menu/${restaurantSlug}`;
 
   /*
    * =========================================================
@@ -1154,7 +1154,7 @@ export default function QRStudioPage() {
               <img
                 id="qr-print-image"
                 src="${imageUrl}"
-                alt="NOVAMENU QR Design"
+                alt="PARTNER QR Design"
               />
 
             </body>
@@ -1327,13 +1327,13 @@ export default function QRStudioPage() {
                 background: `linear-gradient(135deg, ${palette.accent}, ${palette.text})`,
               }}
             >
-              NS
+              PS
             </div>
 
             <div>
 
               <div className="text-sm font-black tracking-[0.18em]">
-                NOVAMENU
+                PARTNER
               </div>
 
               <div
@@ -2075,7 +2075,7 @@ style={{
                   >
 
                     <QRCodeSVG
-                      id="novamenu-download-qr"
+                      id="partner-download-qr"
                       value={
                         qrValue
                       }
@@ -2801,6 +2801,45 @@ function ColorPicker({
             />
           )
         )}
+        
+        {/* FOOTER */}
+
+        <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+          <div
+            className="mx-auto flex max-w-[1400px] items-center justify-between border-t pt-5"
+            style={{ borderColor: 'var(--portal-border)' }}
+          >
+            <div className="py-10 text-center">
+
+              <div className="flex items-center justify-center gap-2">
+
+                <div className="w-5 h-5 overflow-hidden rounded-md">
+                  <img
+                    src="/partnerlogo-icon.png"
+                    alt="Partner"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <span className="text-[9px] font-black tracking-[0.16em] text-[#756F66]">
+                  Partner
+                </span>
+
+              </div>
+
+            </div>
+
+            <p
+              className="text-[9px]"
+              style={{
+                color: 'var(--portal-text)',
+                opacity: 0.4,
+              }}
+            >
+              QR Studio Workspace
+            </p>
+          </div>
+        </footer>
 
       </div>
 
